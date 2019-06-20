@@ -8,11 +8,15 @@ We use Dependabot to notify the team of any updates to dependencies. Once a week
 
 These dependancies don't change the public API surface and are typically safe to merge and we could potentially [configure mergify to automatically merge them if CI passes](https://medium.com/mergify/merging-bots-pull-requests-automatically-548ed0b4a424):
 
-- docfx.console
 - BenchmarkDotNet
 - FluentAssertions 
 - NUnit3TestAdapter 
 - Moq
+
+These dependencies require manual adjustments before merging:
+
+- [docfx.console](https://github.com/nventive/Uno/pull/1082/commits/c222caf8c23b35e19f6b33cd624cbfa714250bfe)
+
 
 ## potentially incompatible with WASM
 
