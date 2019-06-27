@@ -6,7 +6,7 @@ We use Dependabot to notify the team of any updates to dependencies. Once a week
 
 ## internal dependencies
 
-These dependancies don't change the public API surface and are typically safe to merge and we could potentially [configure mergify to automatically merge them if CI passes](https://medium.com/mergify/merging-bots-pull-requests-automatically-548ed0b4a424):
+These dependencies don't change the public API surface and are typically safe to merge and we could potentially [configure mergify to automatically merge them if CI passes](https://medium.com/mergify/merging-bots-pull-requests-automatically-548ed0b4a424):
 
 - BenchmarkDotNet
 - FluentAssertions 
