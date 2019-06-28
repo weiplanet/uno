@@ -305,7 +305,7 @@ namespace Windows.UI.Xaml
 			if (_pointCaptures.Contains(value))
 			{
 				_pointCaptures.Remove(value);
-#if __WASM__
+#if __WASM__ || __IOS__
 				ReleasePointerCaptureNative(value);
 #endif
 			}
@@ -322,7 +322,7 @@ namespace Windows.UI.Xaml
 				this.Log().Warn($"{this}: no pointers to release.");
 				return;
 			}
-#if __WASM__
+#if __WASM__ || __IOS__
 			foreach (var pointer in _pointCaptures)
 			{
 				ReleasePointerCaptureNative(pointer);

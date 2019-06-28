@@ -57,6 +57,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="$(MSBuildThisFileDirectory)Windows_UI_Input\GestureRecognizerTests\PointersEvents.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="$(MSBuildThisFileDirectory)Windows_UI_Xaml\DeferLoadStrategy\DeferLoadStrategyWithTemplateBinding.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -1930,6 +1934,9 @@
       <DependentUpon>AutomationProperties_Name.xaml</DependentUpon>
     </Compile>
     <Compile Include="$(MSBuildThisFileDirectory)Windows_UI_Core\SystemNavigationManagerTests\HardwareBackButton.xaml.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Windows_UI_Input\GestureRecognizerTests\PointersEvents.xaml.cs">
+      <DependentUpon>RoutedEvent_Pointer.xaml</DependentUpon>
+    </Compile>
     <Compile Include="$(MSBuildThisFileDirectory)Windows_UI_Xaml\DeferLoadStrategy\DeferLoadStrategyViewModel.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Windows_UI_Xaml\DeferLoadStrategy\DeferLoadStrategyWithTemplateBinding.xaml.cs">
       <DependentUpon>DeferLoadStrategyWithTemplateBinding.xaml</DependentUpon>
