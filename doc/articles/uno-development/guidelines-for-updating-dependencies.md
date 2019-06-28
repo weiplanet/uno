@@ -11,6 +11,7 @@ These dependencies don't change the public API surface and are typically safe to
 - BenchmarkDotNet
 - FluentAssertions 
 - NUnit3TestAdapter 
+- [NUnit.Runners](https://github.com/unoplatform/uno/pull/1122)
 - Moq
 - [Xamarin.Build.Download](https://github.com/unoplatform/uno/pull/1123)
 
