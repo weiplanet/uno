@@ -13,6 +13,7 @@ These dependencies don't change the public API surface and are typically safe to
 - NUnit3TestAdapter 
 - [NUnit.Runners](https://github.com/unoplatform/uno/pull/1122)
 - [MSTest.TestAdapter](https://github.com/unoplatform/uno/pull/1126)
+- [MSTest.TestFramework](https://github.com/unoplatform/uno/pull/1128)
 - Moq
 - [Xamarin.Build.Download](https://github.com/unoplatform/uno/pull/1123)
 
