@@ -12,6 +12,7 @@ These dependencies don't change the public API surface and are typically safe to
 - FluentAssertions 
 - NUnit3TestAdapter 
 - Moq
+- [Xamarin.Build.Download](https://github.com/unoplatform/uno/pull/1123)
 
 These dependencies require manual adjustments before merging:
 
