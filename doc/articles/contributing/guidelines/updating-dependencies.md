@@ -28,13 +28,17 @@ These dependencies require manual adjustments before merging:
 
 Updating these dependencies will require consumers to upgrade their dependencies and as such need consideration on a case by case basis is required before merging:
 
-- [cef.redist.x86](https://github.com/unoplatform/uno/pull/1171/files#r299310281) should be kept in alignment with `CefSharp.Wpf`
-- [CefSharp.Wpf](https://github.com/unoplatform/uno/pull/1173#discussion_r299309757) should be kept in alignment with `cef.redist.x86`
 - [System.Reactive](https://github.com/unoplatform/uno/pull/1170#pullrequestreview-256670600)
 - [Microsoft.TypeScript.MSBuild](https://github.com/unoplatform/uno/pull/1129) should be kept in alignment with `Microsoft.TypeScript.Compiler`
 - [Microsoft.TypeScript.Compiler](https://github.com/unoplatform/uno/pull/1129) should be kept in alignment with `Microsoft.TypeScript.MSBuild`
 
-## potentially incompatible with WASM
+## additional care required
+
+These dependancies require care and human testing:
+
+- [CommonServiceLocator](https://github.com/unoplatform/uno/pull/1174#issuecomment-507659717)
+- [cef.redist.x86](https://github.com/unoplatform/uno/pull/1173#issuecomment-507662267) should be kept in alignment with `CefSharp.Wpf`
+- [CefSharp.Wpf](https://github.com/unoplatform/uno/pull/1173#issuecomment-507662267) should be kept in alignment with `cef.redist.x86`
 
 These dependancies require care and human testing to confirm compatibility with webassembly:
 
