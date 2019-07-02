@@ -29,6 +29,7 @@ These dependencies require manual adjustments before merging:
 Updating these dependencies will require consumers to upgrade their dependencies and as such need consideration on a case by case basis is required before merging:
 
 - [System.Reactive](https://github.com/unoplatform/uno/pull/1170#pullrequestreview-256670600)
+- [CefSharp.Wpf](https://github.com/unoplatform/uno/pull/1173#discussion_r299309757)
 
 ## potentially incompatible with WASM
 
