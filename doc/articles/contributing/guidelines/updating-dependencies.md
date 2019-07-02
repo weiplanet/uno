@@ -13,7 +13,6 @@ These dependencies don't change the public API surface and are typically safe to
 - [NUnit.Runners](https://github.com/unoplatform/uno/pull/1122)
 - [Microsoft.AppCenter](https://github.com/unoplatform/uno/pull/1175)
 - [Microsoft.CodeAnalysis.VisualBasic](https://github.com/unoplatform/uno/pull/1169)
-- [Microsoft.Extensions.Logging.Debug](https://github.com/unoplatform/uno/pull/1168)
 - [MSTest.TestAdapter](https://github.com/unoplatform/uno/pull/1126)
 - [MSTest.TestFramework](https://github.com/unoplatform/uno/pull/1128)
 - Moq
@@ -29,16 +28,16 @@ These dependencies require manual adjustments before merging:
 Updating these dependencies will require consumers to upgrade their dependencies and as such need consideration on a case by case basis is required before merging:
 
 - [System.Reactive](https://github.com/unoplatform/uno/pull/1170#pullrequestreview-256670600)
-- [Microsoft.TypeScript.MSBuild](https://github.com/unoplatform/uno/pull/1129) should be kept in alignment with `Microsoft.TypeScript.Compiler`
-- [Microsoft.TypeScript.Compiler](https://github.com/unoplatform/uno/pull/1129) should be kept in alignment with `Microsoft.TypeScript.MSBuild`
+- [Microsoft.TypeScript.*](https://github.com/unoplatform/uno/pull/1129) child packages needs to be aligned with the other `Microsoft.TypeScript.*` packages.
 
 ## additional care required
 
 These dependancies require care and human testing:
 
 - [CommonServiceLocator](https://github.com/unoplatform/uno/pull/1174#issuecomment-507659717)
-- [cef.redist.x86](https://github.com/unoplatform/uno/pull/1173#issuecomment-507662267) should be kept in alignment with `CefSharp.Wpf`
-- [CefSharp.Wpf](https://github.com/unoplatform/uno/pull/1173#issuecomment-507662267) should be kept in alignment with `cef.redist.x86`
+- [cef.redist.x86](https://github.com/unoplatform/uno/pull/1173#issuecomment-507662267) needs to be kept in alignment with `CefSharp.Wpf`
+- [CefSharp.Wpf](https://github.com/unoplatform/uno/pull/1173#issuecomment-507662267) needs to be kept in alignment with `cef.redist.x86`
+- [Microsoft.Extensions.Logging.*](https://github.com/unoplatform/uno/pull/1168#issuecomment-507661093) child packages needs to be aligned with the other `Microsoft.Extensions.Logging` packages.
 
 These dependancies require care and human testing to confirm compatibility with webassembly:
 
