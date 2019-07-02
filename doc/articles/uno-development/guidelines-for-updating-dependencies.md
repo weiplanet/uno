@@ -8,6 +8,7 @@ We use Dependabot to notify the team of any updates to dependencies. Once a week
 
 These dependencies don't change the public API surface and are typically safe to merge and we could potentially [configure mergify to automatically merge them if CI passes](https://medium.com/mergify/merging-bots-pull-requests-automatically-548ed0b4a424):
 
+- [CommonServiceLocator](https://github.com/unoplatform/uno/pull/1174)
 - BenchmarkDotNet
 - FluentAssertions 
 - NUnit3TestAdapter 
