@@ -22,6 +22,12 @@ These dependencies require manual adjustments before merging:
 - [docfx.console](https://github.com/nventive/Uno/pull/1082/commits/c222caf8c23b35e19f6b33cd624cbfa714250bfe)
 
 
+## public dependencies
+
+Updating these dependencies will require consumers to upgrade their dependencies and as such need consideration on a case by case basis is required before merging:
+
+- [System.Reactive](https://github.com/unoplatform/uno/pull/1170#pullrequestreview-256670600)
+
 ## potentially incompatible with WASM
 
 These dependancies require care and human testing to confirm compatibility with webassembly:
