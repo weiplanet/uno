@@ -31,6 +31,8 @@ Updating these dependencies will require consumers to upgrade their dependencies
 - [cef.redist.x86](https://github.com/unoplatform/uno/pull/1171/files#r299310281) should be kept in alignment with `CefSharp.Wpf`
 - [CefSharp.Wpf](https://github.com/unoplatform/uno/pull/1173#discussion_r299309757) should be kept in alignment with `cef.redist.x86`
 - [System.Reactive](https://github.com/unoplatform/uno/pull/1170#pullrequestreview-256670600)
+- [Microsoft.TypeScript.MSBuild](https://github.com/unoplatform/uno/pull/1129) should be kept in alignment with `Microsoft.TypeScript.Compiler`
+- [Microsoft.TypeScript.Compiler](https://github.com/unoplatform/uno/pull/1129) should be kept in alignment with `Microsoft.TypeScript.MSBuild`
 
 ## potentially incompatible with WASM
 
