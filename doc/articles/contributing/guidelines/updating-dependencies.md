@@ -25,7 +25,7 @@ These dependencies require manual adjustments before merging:
 
 Updating these dependencies will require consumers to upgrade their dependencies and as such need consideration on a case by case basis is required before merging:
 
-- [System.Reactive](https://github.com/unoplatform/uno/pull/1170#pullrequestreview-256670600)
+- [System.Reactive](https://github.com/unoplatform/uno/pull/1170#pullrequestreview-256670600). Currently only used in the `WpfHost` which eventually will be deprecated.
 - [Microsoft.TypeScript.*](https://github.com/unoplatform/uno/pull/1129) child packages needs to be aligned with the other `Microsoft.TypeScript.*` packages.
 
 ## additional care required
