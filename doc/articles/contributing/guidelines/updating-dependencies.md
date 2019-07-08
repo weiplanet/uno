@@ -37,7 +37,7 @@ These dependancies require care and human testing:
 - [cef.redist.x86](https://github.com/unoplatform/uno/pull/1173#issuecomment-507662267) needs to be kept in alignment with `CefSharp.Wpf`
 - [CefSharp.Wpf](https://github.com/unoplatform/uno/pull/1173#issuecomment-507662267) needs to be kept in alignment with `cef.redist.x86`
 - [Microsoft.CodeAnalysis.*](https://github.com/unoplatform/uno/pull/1169) child packages needs to be aligned with the other `Microsoft.CodeAnalysis` packages.
-- [Microsoft.Extensions.Logging.*](https://github.com/unoplatform/uno/pull/1168#issuecomment-507661093) child packages needs to be aligned with the other `Microsoft.Extensions.Logging` packages.
+- [Microsoft.Extensions.Logging.*](https://github.com/unoplatform/uno/pull/1108/files#r300432589) child packages needs to be aligned with the other `Microsoft.Extensions.Logging` packages. Currently can't be upgraded because most recent versions are using thread, which are not supported on Wasm.
 
 These dependancies require care and human testing to confirm compatibility with webassembly:
 
