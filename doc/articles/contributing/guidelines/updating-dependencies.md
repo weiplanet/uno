@@ -6,7 +6,6 @@ We use Dependabot to notify the team of any updates to dependencies. Once a week
 
 These dependencies don't change the public API surface and are typically safe to merge and we could potentially [configure mergify to automatically merge them if CI passes](https://medium.com/mergify/merging-bots-pull-requests-automatically-548ed0b4a424):
 
-- [CommonServiceLocator](https://github.com/unoplatform/uno/pull/1174)
 - BenchmarkDotNet
 - FluentAssertions 
 - NUnit3TestAdapter 
@@ -34,7 +33,7 @@ Updating these dependencies will require consumers to upgrade their dependencies
 These dependancies require care and human testing:
 
 
-- [CommonServiceLocator](https://github.com/unoplatform/uno/pull/1174#issuecomment-507659717)
+- [CommonServiceLocator](https://github.com/unoplatform/uno/pull/1174#issuecomment-507659717). This specific dependency needs to be removed from Uno.
 - [cef.redist.x86](https://github.com/unoplatform/uno/pull/1173#issuecomment-507662267) needs to be kept in alignment with `CefSharp.Wpf`
 - [CefSharp.Wpf](https://github.com/unoplatform/uno/pull/1173#issuecomment-507662267) needs to be kept in alignment with `cef.redist.x86`
 - [Microsoft.CodeAnalysis.*](https://github.com/unoplatform/uno/pull/1169) child packages needs to be aligned with the other `Microsoft.CodeAnalysis` packages.
