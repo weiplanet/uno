@@ -21,6 +21,7 @@ These dependencies don't change the public API surface and are typically safe to
 These dependencies require manual adjustments before merging:
 
 - [docfx.console](https://github.com/unoplatform/Uno/pull/1082/commits/c222caf8c23b35e19f6b33cd624cbfa714250bfe)
+- `Microsoft.CodeAnalysis.*`. Those dependencies need to be aligned with the source generation task package, for which the dependency cannot be be explicitly provided.
 
 
 ## public dependencies
@@ -41,7 +42,7 @@ These dependancies require care and human testing:
 - [Microsoft.CodeAnalysis.*](https://github.com/unoplatform/uno/pull/1169) child packages needs to be aligned with the other `Microsoft.CodeAnalysis` packages.
 - [Microsoft.Extensions.Logging.*](https://github.com/unoplatform/uno/pull/1108/files#r300432589) child packages needs to be aligned with the other `Microsoft.Extensions.Logging` packages. Currently can't be upgraded because most recent versions are using thread, which are not supported on Wasm.
 
-These dependancies require care and human testing to confirm compatibility with webassembly:
+These dependencies require care and human testing to confirm compatibility with webassembly:
 
 - [Microsoft.Extensions.Logging.Console](https://github.com/unoplatform/Uno/pull/894#issuecomment-495046929)
 
