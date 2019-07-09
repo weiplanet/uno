@@ -12,6 +12,7 @@ These dependencies don't change the public API surface and are typically safe to
 - [NUnit.Runners](https://github.com/unoplatform/uno/pull/1122)
 - [Microsoft.AppCenter](https://github.com/unoplatform/uno/pull/1175)
 - [Microsoft.SourceLink.GitHub](https://github.com/unoplatform/uno/pull/1204)
+- [Microsoft.NET.Test.Sdk](https://github.com/unoplatform/uno/pull/1203)
 - [MSTest.TestAdapter](https://github.com/unoplatform/uno/pull/1126)
 - [MSTest.TestFramework](https://github.com/unoplatform/uno/pull/1128)
 - Moq
