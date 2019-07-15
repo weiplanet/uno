@@ -39,7 +39,8 @@ These dependancies require care and human testing:
 - [CommonServiceLocator](https://github.com/unoplatform/uno/pull/1174#issuecomment-507659717). This specific dependency needs to be removed from Uno.
 - [cef.redist.x86](https://github.com/unoplatform/uno/pull/1173#issuecomment-507662267) needs to be kept in alignment with `CefSharp.Wpf`
 - [CefSharp.Wpf](https://github.com/unoplatform/uno/pull/1173#issuecomment-507662267) needs to be kept in alignment with `cef.redist.x86`
-- [Microsoft.CodeAnalysis.*](https://github.com/unoplatform/uno/pull/1169) child packages needs to be aligned with the other `Microsoft.CodeAnalysis` packages.
+- [Microsoft.CodeAnalysis.*](https://github.com/unoplatform/uno/pull/1169) children packages needs to be aligned with the other `Microsoft.CodeAnalysis` packages.
+- [Microsoft.Build.*](https://github.com/unoplatform/uno/pull/1169) children packages needs to be aligned with the other `Microsoft.Build` packages, and need to be aligned with `Uno.SourceGenerationTasks` package features.
 - [Microsoft.Extensions.Logging.*](https://github.com/unoplatform/uno/pull/1108/files#r300432589) child packages needs to be aligned with the other `Microsoft.Extensions.Logging` packages. Currently can't be upgraded because most recent versions are using thread, which are not supported on Wasm.
 
 These dependencies require care and human testing to confirm compatibility with webassembly:
