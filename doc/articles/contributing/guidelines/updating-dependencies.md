@@ -47,6 +47,11 @@ These dependencies require care and human testing to confirm compatibility with 
 
 - [Microsoft.Extensions.Logging.Console](https://github.com/unoplatform/Uno/pull/894#issuecomment-495046929)
 
+These dependencies are updated manually as part of the release process:
+
+- Uno.SourceGenerationTasks
+- Uno.Core
+
 ## chatops
 
 You can trigger Dependabot actions by commenting on the pull-request:
