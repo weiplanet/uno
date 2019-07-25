@@ -2,7 +2,7 @@
 
 ## Overview
 
-When a pull-request is merged to master a new development version is automatically pushed to NuGet.org. A development version can be identified by the `-dev` prefix ie. `major.minor.patch-dev.2294`.
+When a pull-request is merged to master a new development version is automatically pushed to NuGet.org. A development version can be identified by the `-dev` suffix ie. `major.minor.patch-dev.2294`.
 
 A `Canary` is a version of a real-world application or particular version of Uno that is offered under professional support. There are continuous integration (CI) pipelines configured that consume these development builds. If the builds of these applications fail then then it's a early signal that overnight a breaking compilation change may have been accidentally introduced into Uno. This style of regression is rare as there are API approval tests that are run on every pull-request to master. Typically if a regression slips in then it's something that only integration testing would have picked up - ie. package incompatility between dependencies.
 
