@@ -85,7 +85,7 @@ namespace Windows.UI.Xaml
 		private bool _isPointerOver;
 
 		/// <summary>
-		/// Indicates if a pointer is currently over the element (i.e. OverState)
+		/// Indicates if a pointer (no matter the pointer) is currently over the element (i.e. OverState)
 		/// </summary>
 		internal bool IsPointerOver
 		{
@@ -105,7 +105,7 @@ namespace Windows.UI.Xaml
 		}
 		#endregion
 
-#if __IOS__ // This is temporary until all platforms Pointers have been reworked
+#if __IOS__ || __WASM__ // This is temporary until all platforms Pointers have been reworked
 
 		private /* readonly but partial */ Lazy<GestureRecognizer> _gestures;
 
@@ -140,7 +140,7 @@ namespace Windows.UI.Xaml
 		}
 
 		#region Add/Remove handler
-		partial void AddHandlerPartial(RoutedEvent routedEvent, int handlersCount, object handler, bool handledEventsToo)
+		partial void AddGestureHandler(RoutedEvent routedEvent, int handlersCount, object handler, bool handledEventsToo)
 		{
 			if (handlersCount == 1)
 			{
@@ -149,7 +149,7 @@ namespace Windows.UI.Xaml
 			}
 		}
 
-		partial void RemoveHandlerPartial(RoutedEvent routedEvent, int remainingHandlersCount, object handler)
+		partial void RemoveGestureHandler(RoutedEvent routedEvent, int remainingHandlersCount, object handler)
 		{
 			if (remainingHandlersCount == 0)
 			{
@@ -170,6 +170,7 @@ namespace Windows.UI.Xaml
 		}
 		#endregion
 
+#if __IOS__
 		#region Raise pointer events and gesture recognition
 		/// <summary>
 		/// This should be invoked by the native part of the UIElement when a native touch starts
@@ -351,6 +352,7 @@ namespace Windows.UI.Xaml
 			}
 		}
 		#endregion
+#endif
 #else
 		private void InitializePointers() { }
 #endif
@@ -368,7 +370,6 @@ namespace Windows.UI.Xaml
 		 */
 
 		internal bool IsCaptured(Pointer pointer) => _pointCaptures.Any();
-
 
 		public bool CapturePointer(Pointer value)
 		{
