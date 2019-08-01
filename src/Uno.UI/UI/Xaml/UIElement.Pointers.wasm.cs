@@ -20,18 +20,65 @@ using Uno.Collections;
 using Uno.UI;
 using System.Numerics;
 using Windows.UI.Input;
+using Uno.UI.Xaml;
 
 namespace Windows.UI.Xaml
 {
 	public partial class UIElement : DependencyObject
 	{
-		private PointerRoutedEventArgs PayloadToPressedPointerArgs(string payload) => PayloadToPointerArgs(payload, isInContact: true, pressed: true);
-		private PointerRoutedEventArgs PayloadToMovedPointerArgs(string payload) => PayloadToPointerArgs(payload, isInContact: true);
-		private PointerRoutedEventArgs PayloadToReleasedPointerArgs(string payload) => PayloadToPointerArgs(payload, isInContact: true, pressed: false);
-		private PointerRoutedEventArgs PayloadToEnteredPointerArgs(string payload) => PayloadToPointerArgs(payload, isInContact: false);
-		private PointerRoutedEventArgs PayloadToExitedPointerArgs(string payload) => PayloadToPointerArgs(payload, isInContact: false);
+		private static readonly Dictionary<RoutedEvent, (string domEventName, EventArgsParser argsParser, RoutedEventHandlerWithHandled handler)> _pointerHandlers
+			= new Dictionary<RoutedEvent, (string, EventArgsParser, RoutedEventHandlerWithHandled)>
+			{
+				{PointerEnteredEvent, ("pointerover", PayloadToEnteredPointerArgs, (snd, args) => ((UIElement)snd).OnNativePointerEnter((PointerRoutedEventArgs)args))},
+				{PointerPressedEvent, ("pointerdown", PayloadToPressedPointerArgs, (snd, args) => ((UIElement)snd).OnNativePointerDown((PointerRoutedEventArgs)args))},
+				{PointerMovedEvent, ("pointermove", PayloadToMovedPointerArgs, (snd, args) => ((UIElement)snd).OnNativePointerMove((PointerRoutedEventArgs)args))},
+				{PointerReleasedEvent, ("pointerup", PayloadToReleasedPointerArgs, (snd, args) => ((UIElement)snd).OnNativePointerUp((PointerRoutedEventArgs)args))},
+				{PointerExitedEvent, ("pointerout", PayloadToExitedPointerArgs, (snd, args) => ((UIElement)snd).OnNativePointerExited((PointerRoutedEventArgs)args))},
+				{PointerCanceledEvent, ("pointercancel", PayloadToCancelledPointerArgs, (snd, args) => ((UIElement)snd).OnNativePointerExited((PointerRoutedEventArgs)args))},
+			};
 
-		private PointerRoutedEventArgs PayloadToPointerArgs(string payload, bool isInContact, bool? pressed = null)
+		partial void OnGestureRecognizerInitialized(GestureRecognizer recognizer)
+		{
+			// When a gesture recognizer is initialized, we subscribe to pointer events in order to feed it.
+			// Note: We subscribe to * all * pointer events in order to maintain a logical internal state of pointers over / press / capture
+
+			foreach (var pointerEvent in _pointerHandlers.Keys)
+			{
+				AddPointerHandler(pointerEvent, 1, default, default);
+			}
+		}
+
+		partial void AddPointerHandler(RoutedEvent routedEvent, int handlersCount, object handler, bool handledEventsToo)
+		{
+			if (handlersCount != 1
+				// We do not remove event handlers for now, so do not rely only on the handlersCount and keep track of registered events
+				|| _registeredRoutedEvents.HasFlag(routedEvent.Flag))
+			{
+				return;
+			}
+			_registeredRoutedEvents |= routedEvent.Flag;
+
+			var (domEventName, argsParser, pointerHandler) = _pointerHandlers[routedEvent];
+
+			RegisterEventHandler(
+				domEventName,
+				handler: pointerHandler,
+				onCapturePhase: false,
+				canBubbleNatively: true,
+				eventFilter: HtmlEventFilter.Default,
+				eventExtractor: HtmlEventExtractor.PointerEventExtractor,
+				payloadConverter: argsParser
+			);
+		}
+
+		private static PointerRoutedEventArgs PayloadToEnteredPointerArgs(object snd, string payload) => PayloadToPointerArgs(snd, payload, isInContact: false);
+		private static PointerRoutedEventArgs PayloadToPressedPointerArgs(object snd, string payload) => PayloadToPointerArgs(snd, payload, isInContact: true, pressed: true);
+		private static PointerRoutedEventArgs PayloadToMovedPointerArgs(object snd, string payload) => PayloadToPointerArgs(snd, payload, isInContact: true);
+		private static PointerRoutedEventArgs PayloadToReleasedPointerArgs(object snd, string payload) => PayloadToPointerArgs(snd, payload, isInContact: true, pressed: false);
+		private static PointerRoutedEventArgs PayloadToExitedPointerArgs(object snd, string payload) => PayloadToPointerArgs(snd, payload, isInContact: false);
+		private static PointerRoutedEventArgs PayloadToCancelledPointerArgs(object snd, string payload) => PayloadToPointerArgs(snd, payload, isInContact: false, pressed: false);
+
+		private static PointerRoutedEventArgs PayloadToPointerArgs(object snd, string payload, bool isInContact, bool? pressed = null)
 		{
 			var parts = payload?.Split(';');
 			if (parts?.Length != 7)
@@ -84,7 +131,27 @@ namespace Windows.UI.Xaml
 				key,
 				keyModifiers,
 				update,
-				this);
+				(UIElement)snd);
+		}
+
+		private static PointerDeviceType ConvertPointerTypeString(string typeStr)
+		{
+			PointerDeviceType type;
+			switch (typeStr.ToUpper())
+			{
+				case "MOUSE":
+				default:
+					type = PointerDeviceType.Mouse;
+					break;
+				case "PEN":
+					type = PointerDeviceType.Pen;
+					break;
+				case "TOUCH":
+					type = PointerDeviceType.Touch;
+					break;
+			}
+
+			return type;
 		}
 
 		private void CapturePointerNative(Pointer pointer)

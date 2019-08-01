@@ -112,17 +112,17 @@ namespace Windows.UI.Xaml
 			}
 		}
 
-		partial void RemovePointerHandler(RoutedEvent routedEvent, int remaingingHandlersCount, object handler)
+		partial void RemovePointerHandler(RoutedEvent routedEvent, int remainingHandlersCount, object handler)
 		{
-			if (remaingingHandlersCount == 0)
+			if (remainingHandlersCount == 0)
 			{
 				_gestures.Value.UpdateShouldHandle(routedEvent, false);
 			}
 		}
 
-		partial void RemoveGestureHandler(RoutedEvent routedEvent, int remaingingHandlersCount, object handler)
+		partial void RemoveGestureHandler(RoutedEvent routedEvent, int remainingHandlersCount, object handler)
 		{
-			if (remaingingHandlersCount == 0)
+			if (remainingHandlersCount == 0)
 			{
 				_gestures.Value.UpdateShouldHandle(routedEvent, false);
 			}
