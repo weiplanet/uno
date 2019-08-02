@@ -291,6 +291,7 @@ var Uno;
                 this.containerElementId = containerElementId;
                 this.loadingElementId = loadingElementId;
                 this.allActiveElementsById = {};
+                this._isSettingProperty = false;
                 this.initDom();
             }
             /**
@@ -574,10 +575,16 @@ var Uno;
                 */
             setProperty(elementId, properties) {
                 const element = this.getView(elementId);
-                for (const name in properties) {
-                    if (properties.hasOwnProperty(name)) {
-                        element[name] = properties[name];
+                try {
+                    this._isSettingProperty = true;
+                    for (const name in properties) {
+                        if (properties.hasOwnProperty(name)) {
+                            element[name] = properties[name];
+                        }
                     }
+                }
+                finally {
+                    this._isSettingProperty = false;
                 }
                 return "ok";
             }
@@ -587,8 +594,14 @@ var Uno;
             setPropertyNative(pParams) {
                 const params = WindowManagerSetPropertyParams.unmarshal(pParams);
                 const element = this.getView(params.HtmlId);
-                for (let i = 0; i < params.Pairs_Length; i += 2) {
-                    element[params.Pairs[i]] = params.Pairs[i + 1];
+                try {
+                    this._isSettingProperty = true;
+                    for (let i = 0; i < params.Pairs_Length; i += 2) {
+                        element[params.Pairs[i]] = params.Pairs[i + 1];
+                    }
+                }
+                finally {
+                    this._isSettingProperty = false;
                 }
                 return true;
             }
@@ -800,8 +813,29 @@ var Uno;
                 const eventFilter = this.getEventFilter(eventFilterName);
                 const eventExtractor = this.getEventExtractor(eventExtractorName);
                 const eventHandler = (event) => {
-                    if (eventFilter && !eventFilter(event)) {
+                    var pt = event;
+                    var elt = element;
+                    var svg = element;
+                    if (pt && elt) {
+                        console.log(`Raising event ${eventName} on ${elementId} @: ${pt.offsetX}x${pt.offsetY} elt: ${elt.offsetWidth}x${elt.offsetHeight}`);
+                    }
+                    if (pt && svg) {
+                        console.log(`Raising event ${eventName} on ${elementId} @: ${pt.offsetX}x${pt.offsetY} elt: ${svg.clientWidth}x${svg.clientHeight}`);
+                    }
+                    if (pt && elt && eventName == "pointerout" && (pt.offsetX < elt.offsetWidth || pt.offsetX < elt.offsetHeight)) {
+                        console.log("Muted invalid pointerout " + eventName + " on element " + elementId);
                         return;
+                    }
+                    if (pt && svg && eventName == "pointerout" && (pt.offsetX < svg.clientWidth || pt.offsetX < svg.clientHeight)) {
+                        console.log("Muted invalid pointerout " + eventName + " on element " + elementId);
+                        return;
+                    }
+                    if (eventFilter && !eventFilter(event) && !this._isSettingProperty) {
+                        console.log("Muted event " + eventName + " on element " + elementId);
+                        return;
+                    }
+                    if (!pt) {
+                        console.log("Raising event " + eventName + " on element " + elementId);
                     }
                     const eventPayload = eventExtractor
                         ? `${eventExtractor(event)}`
@@ -811,13 +845,19 @@ var Uno;
                         event.stopPropagation();
                     }
                 };
+                console.log("Subscribing to event " + eventName + " on element " + elementId);
                 element.addEventListener(eventName, eventHandler, onCapturePhase);
+                if (eventName == "pointerout") {
+                    this.registerEventOnViewInternal(elementId, "pointerleave", onCapturePhase, eventFilterName, eventExtractorName);
+                }
             }
             /**
              * left pointer event filter to be used with registerEventOnView
              * @param evt
              */
             leftPointerEventFilter(evt) {
+                //return evt && evt.layerX > 
+                //return !this._isSettingProperty;
                 return evt ? evt.eventPhase === 2 || evt.eventPhase === 3 && (!evt.button || evt.button === 0) : false;
             }
             /**

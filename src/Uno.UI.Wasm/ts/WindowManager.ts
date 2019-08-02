@@ -370,14 +370,22 @@
 		public setProperty(elementId: number, properties: { [name: string]: string }): string {
 			const element = this.getView(elementId);
 
-			for (const name in properties) {
-				if (properties.hasOwnProperty(name)) {
-					(element as any)[name] = properties[name];
+			try {
+				this._isSettingProperty = true;
+				for (const name in properties) {
+					if (properties.hasOwnProperty(name)) {
+						(element as any)[name] = properties[name];
+					}
 				}
+			} finally {
+				this._isSettingProperty = false;
 			}
+
 
 			return "ok";
 		}
+
+		private _isSettingProperty: boolean = false;
 
 		/**
 			* Set a property for an element.
@@ -387,8 +395,13 @@
 			const params = WindowManagerSetPropertyParams.unmarshal(pParams);
 			const element = this.getView(params.HtmlId);
 
-			for (let i = 0; i < params.Pairs_Length; i += 2) {
-				(element as any)[params.Pairs[i]] = params.Pairs[i + 1];
+			try {
+				this._isSettingProperty = true;
+				for (let i = 0; i < params.Pairs_Length; i += 2) {
+					(element as any)[params.Pairs[i]] = params.Pairs[i + 1];
+				}
+			} finally {
+				this._isSettingProperty = false;
 			}
 
 			return true;
@@ -665,8 +678,31 @@
 			const eventExtractor = this.getEventExtractor(eventExtractorName);
 
 			const eventHandler = (event: Event) => {
-				if (eventFilter && !eventFilter(event)) {
+				var pt = event as PointerEvent;
+				var elt = element as HTMLElement;
+				var svg = element as SVGElement;
+				if (pt && elt) {
+					console.log(`Raising event ${eventName} on ${elementId} @: ${pt.offsetX}x${pt.offsetY} elt: ${elt.offsetWidth}x${elt.offsetHeight}`);
+				}
+				if (pt && svg) {
+					console.log(`Raising event ${eventName} on ${elementId} @: ${pt.offsetX}x${pt.offsetY} elt: ${svg.clientWidth}x${svg.clientHeight}`);
+				}
+				if (pt && elt && eventName == "pointerout" && (pt.offsetX < elt.offsetWidth || pt.offsetX < elt.offsetHeight)) {
+					console.log("Muted invalid pointerout " + eventName + " on element " + elementId);
 					return;
+				}
+				if (pt && svg && eventName == "pointerout" && (pt.offsetX < svg.clientWidth || pt.offsetX < svg.clientHeight)) {
+					console.log("Muted invalid pointerout " + eventName + " on element " + elementId);
+					return;
+				}
+
+				if (eventFilter && !eventFilter(event) && !this._isSettingProperty) {
+					console.log("Muted event " + eventName + " on element " + elementId);
+					return;
+				}
+
+				if (!pt) {
+					console.log("Raising event " + eventName + " on element " + elementId);
 				}
 
 				const eventPayload =
@@ -680,7 +716,13 @@
 				}
 			};
 
+			console.log("Subscribing to event " + eventName + " on element " + elementId);
+
 			element.addEventListener(eventName, eventHandler, onCapturePhase);
+
+			if (eventName == "pointerout") {
+				this.registerEventOnViewInternal(elementId, "pointerleave", onCapturePhase, eventFilterName, eventExtractorName);
+			}
 		}
 
 		/**
@@ -688,6 +730,9 @@
 		 * @param evt
 		 */
 		private leftPointerEventFilter(evt: PointerEvent): boolean {
+
+			//return evt && evt.layerX > 
+			//return !this._isSettingProperty;
 			return evt ? evt.eventPhase === 2 || evt.eventPhase === 3 && (!evt.button || evt.button === 0) : false;
 		}
 

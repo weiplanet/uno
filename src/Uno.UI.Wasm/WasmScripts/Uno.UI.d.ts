@@ -226,6 +226,7 @@ declare namespace Uno.UI {
         setProperty(elementId: number, properties: {
             [name: string]: string;
         }): string;
+        private _isSettingProperty;
         /**
             * Set a property for an element.
             */

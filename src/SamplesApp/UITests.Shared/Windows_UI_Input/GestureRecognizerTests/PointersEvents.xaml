@@ -5,7 +5,7 @@
 	xmlns:local="using:UITests.Shared.Windows_UI_Xaml_Input.RoutedEvents">
 
 	<Grid>
-		<ScrollViewer>
+		<!--<ScrollViewer>-->
 			<Grid x:Name="_touchTarget" MinHeight="2048">
 				<TextBlock FontSize="8" x:Name="_output" />
 
@@ -15,6 +15,6 @@
 
 				<Button Margin="200, 600" Height="100" Width="300" Content="Click me ... but not while scrolling" Click="OnButtonClicked" Tapped="OnButtonTapped" />
 			</Grid>
-		</ScrollViewer>
+		<!--</ScrollViewer>-->
 	</Grid>
 </Page>

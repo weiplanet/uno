@@ -26,6 +26,10 @@ namespace Windows.UI.Xaml
 {
 	public partial class UIElement : DependencyObject
 	{
+		// Ref:
+		// https://www.w3.org/TR/pointerevents/
+		// https://developer.mozilla.org/en-US/docs/Web/API/PointerEvent
+
 		private static readonly Dictionary<RoutedEvent, (string domEventName, EventArgsParser argsParser, RoutedEventHandlerWithHandled handler)> _pointerHandlers
 			= new Dictionary<RoutedEvent, (string, EventArgsParser, RoutedEventHandlerWithHandled)>
 			{
@@ -34,7 +38,7 @@ namespace Windows.UI.Xaml
 				{PointerMovedEvent, ("pointermove", PayloadToMovedPointerArgs, (snd, args) => ((UIElement)snd).OnNativePointerMove((PointerRoutedEventArgs)args))},
 				{PointerReleasedEvent, ("pointerup", PayloadToReleasedPointerArgs, (snd, args) => ((UIElement)snd).OnNativePointerUp((PointerRoutedEventArgs)args))},
 				{PointerExitedEvent, ("pointerout", PayloadToExitedPointerArgs, (snd, args) => ((UIElement)snd).OnNativePointerExited((PointerRoutedEventArgs)args))},
-				{PointerCanceledEvent, ("pointercancel", PayloadToCancelledPointerArgs, (snd, args) => ((UIElement)snd).OnNativePointerExited((PointerRoutedEventArgs)args))},
+				{PointerCanceledEvent, ("pointercancel", PayloadToCancelledPointerArgs, (snd, args) => ((UIElement)snd).OnNativePointerCancel((PointerRoutedEventArgs)args, isSwallowedBySystem: true))}, //https://www.w3.org/TR/pointerevents/#the-pointercancel-event
 			};
 
 		partial void OnGestureRecognizerInitialized(GestureRecognizer recognizer)
@@ -58,16 +62,20 @@ namespace Windows.UI.Xaml
 			}
 			_registeredRoutedEvents |= routedEvent.Flag;
 
-			var (domEventName, argsParser, pointerHandler) = _pointerHandlers[routedEvent];
+			if (!_pointerHandlers.TryGetValue(routedEvent, out var evt))
+			{
+				Application.Current.RaiseRecoverableUnhandledException(new NotImplementedException($"Pointer event {routedEvent.Name} is not supported on this platform"));
+				return;
+			}
 
 			RegisterEventHandler(
-				domEventName,
-				handler: pointerHandler,
+				evt.domEventName,
+				handler: evt.handler,
 				onCapturePhase: false,
 				canBubbleNatively: true,
 				eventFilter: HtmlEventFilter.Default,
 				eventExtractor: HtmlEventExtractor.PointerEventExtractor,
-				payloadConverter: argsParser
+				payloadConverter: evt.argsParser
 			);
 		}
 
