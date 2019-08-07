@@ -39,3 +39,7 @@ declare class When_SingleStringParams {
     MyString: string;
     static unmarshal(pData: number): When_SingleStringParams;
 }
+interface PointerEvent {
+    isOver(this: PointerEvent, element: HTMLElement | SVGElement): boolean;
+    isOverDeep(this: PointerEvent, element: HTMLElement | SVGElement): boolean;
+}

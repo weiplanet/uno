@@ -226,6 +226,7 @@ declare namespace Uno.UI {
         setProperty(elementId: number, properties: {
             [name: string]: string;
         }): string;
+        private _isSettingProperty;
         /**
             * Set a property for an element.
             */
@@ -321,6 +322,9 @@ declare namespace Uno.UI {
             * @param onCapturePhase true means "on trickle down", false means "on bubble up". Default is false.
             */
         registerEventOnViewNative(pParams: number): boolean;
+        private processPendingEvent;
+        private _isSubscribedToMove;
+        private ensureConfirmedEventDequeuing;
         /**
             * Add an event handler to a html element.
             *
@@ -328,6 +332,7 @@ declare namespace Uno.UI {
             * @param onCapturePhase true means "on trickle down", false means "on bubble up". Default is false.
             */
         private registerEventOnViewInternal;
+        private raiseEvent;
         /**
          * left pointer event filter to be used with registerEventOnView
          * @param evt
@@ -661,6 +666,16 @@ declare class WindowManagerSetXUidParams {
     HtmlId: number;
     Uid: string;
     static unmarshal(pData: number): WindowManagerSetXUidParams;
+}
+declare namespace Uno.UI.Extensions {
+    class PointerPointExtensions {
+        static isOver(this: PointerEvent, element: HTMLElement | SVGElement): boolean;
+        static isOverDeep(this: PointerEvent, element: HTMLElement | SVGElement): boolean;
+    }
+}
+interface PointerEvent {
+    isOver(this: PointerEvent, element: HTMLElement | SVGElement): boolean;
+    isOverDeep(this: PointerEvent, element: HTMLElement | SVGElement): boolean;
 }
 declare module Uno.UI {
     interface IAppManifest {

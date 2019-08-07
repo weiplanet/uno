@@ -192,3 +192,25 @@ class When_SingleStringParams {
         return ret;
     }
 }
+PointerEvent.prototype.isOver = function (element) {
+    const bounds = element.getBoundingClientRect();
+    return this.pageX >= bounds.left &&
+        this.pageX < bounds.right &&
+        this.pageY >= bounds.top &&
+        this.pageY < bounds.bottom;
+};
+PointerEvent.prototype.isOverDeep = function (element) {
+    if (!element) {
+        return false;
+    }
+    else if (element.style.pointerEvents != "none") {
+        return this.isOver(element);
+    }
+    else {
+        for (let elt of element.children) {
+            if (this.isOverDeep(elt)) {
+                return true;
+            }
+        }
+    }
+};
