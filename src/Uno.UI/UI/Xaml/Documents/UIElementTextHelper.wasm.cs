@@ -30,7 +30,7 @@ namespace Uno.UI.UI.Xaml.Documents
 				}
 			}
 
-			element.SetProperty("textContent", text);
+			element.SetProperty("innerText", text);
 		}
 
 		internal static void SetFontStyle(this UIElement element, object localValue)

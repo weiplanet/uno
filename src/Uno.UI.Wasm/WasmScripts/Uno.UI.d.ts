@@ -322,6 +322,10 @@ declare namespace Uno.UI {
             * @param onCapturePhase true means "on trickle down", false means "on bubble up". Default is false.
             */
         registerEventOnViewNative(pParams: number): boolean;
+        private processPendingEvent;
+        private isOver;
+        private _isSubscribedToMove;
+        private ensureConfirmedEventDequeuing;
         /**
             * Add an event handler to a html element.
             *
@@ -329,6 +333,7 @@ declare namespace Uno.UI {
             * @param onCapturePhase true means "on trickle down", false means "on bubble up". Default is false.
             */
         private registerEventOnViewInternal;
+        private raiseEvent;
         /**
          * left pointer event filter to be used with registerEventOnView
          * @param evt

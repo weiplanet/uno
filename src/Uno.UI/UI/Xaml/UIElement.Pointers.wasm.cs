@@ -33,11 +33,13 @@ namespace Windows.UI.Xaml
 		private static readonly Dictionary<RoutedEvent, (string domEventName, EventArgsParser argsParser, RoutedEventHandlerWithHandled handler)> _pointerHandlers
 			= new Dictionary<RoutedEvent, (string, EventArgsParser, RoutedEventHandlerWithHandled)>
 			{
-				{PointerEnteredEvent, ("pointerover", PayloadToEnteredPointerArgs, (snd, args) => ((UIElement)snd).OnNativePointerEnter((PointerRoutedEventArgs)args))},
+				//{PointerEnteredEvent, ("pointerover", PayloadToEnteredPointerArgs, (snd, args) => ((UIElement)snd).OnNativePointerEnter((PointerRoutedEventArgs)args))},
+				{PointerEnteredEvent, ("pointerenter", PayloadToEnteredPointerArgs, (snd, args) => ((UIElement)snd).OnNativePointerEnter((PointerRoutedEventArgs)args))},
 				{PointerPressedEvent, ("pointerdown", PayloadToPressedPointerArgs, (snd, args) => ((UIElement)snd).OnNativePointerDown((PointerRoutedEventArgs)args))},
 				{PointerMovedEvent, ("pointermove", PayloadToMovedPointerArgs, (snd, args) => ((UIElement)snd).OnNativePointerMove((PointerRoutedEventArgs)args))},
 				{PointerReleasedEvent, ("pointerup", PayloadToReleasedPointerArgs, (snd, args) => ((UIElement)snd).OnNativePointerUp((PointerRoutedEventArgs)args))},
-				{PointerExitedEvent, ("pointerout", PayloadToExitedPointerArgs, (snd, args) => ((UIElement)snd).OnNativePointerExited((PointerRoutedEventArgs)args))},
+				//{PointerExitedEvent, ("pointerout", PayloadToExitedPointerArgs, (snd, args) => ((UIElement)snd).OnNativePointerExited((PointerRoutedEventArgs)args))},
+				{PointerExitedEvent, ("pointerleave", PayloadToExitedPointerArgs, (snd, args) => ((UIElement)snd).OnNativePointerExited((PointerRoutedEventArgs)args))},
 				{PointerCanceledEvent, ("pointercancel", PayloadToCancelledPointerArgs, (snd, args) => ((UIElement)snd).OnNativePointerCancel((PointerRoutedEventArgs)args, isSwallowedBySystem: true))}, //https://www.w3.org/TR/pointerevents/#the-pointercancel-event
 			};
 
@@ -79,14 +81,14 @@ namespace Windows.UI.Xaml
 			);
 		}
 
-		private static PointerRoutedEventArgs PayloadToEnteredPointerArgs(object snd, string payload) => PayloadToPointerArgs(snd, payload, isInContact: false);
+		private static PointerRoutedEventArgs PayloadToEnteredPointerArgs(object snd, string payload) => PayloadToPointerArgs(snd, payload, isInContact: false, canBubble: false);
 		private static PointerRoutedEventArgs PayloadToPressedPointerArgs(object snd, string payload) => PayloadToPointerArgs(snd, payload, isInContact: true, pressed: true);
 		private static PointerRoutedEventArgs PayloadToMovedPointerArgs(object snd, string payload) => PayloadToPointerArgs(snd, payload, isInContact: true);
 		private static PointerRoutedEventArgs PayloadToReleasedPointerArgs(object snd, string payload) => PayloadToPointerArgs(snd, payload, isInContact: true, pressed: false);
-		private static PointerRoutedEventArgs PayloadToExitedPointerArgs(object snd, string payload) => PayloadToPointerArgs(snd, payload, isInContact: false);
+		private static PointerRoutedEventArgs PayloadToExitedPointerArgs(object snd, string payload) => PayloadToPointerArgs(snd, payload, isInContact: false, canBubble: false);
 		private static PointerRoutedEventArgs PayloadToCancelledPointerArgs(object snd, string payload) => PayloadToPointerArgs(snd, payload, isInContact: false, pressed: false);
 
-		private static PointerRoutedEventArgs PayloadToPointerArgs(object snd, string payload, bool isInContact, bool? pressed = null)
+		private static PointerRoutedEventArgs PayloadToPointerArgs(object snd, string payload, bool isInContact, bool canBubble = true, bool? pressed = null)
 		{
 			var parts = payload?.Split(';');
 			if (parts?.Length != 7)
@@ -139,7 +141,8 @@ namespace Windows.UI.Xaml
 				key,
 				keyModifiers,
 				update,
-				(UIElement)snd);
+				(UIElement)snd,
+				canBubble);
 		}
 
 		private static PointerDeviceType ConvertPointerTypeString(string typeStr)
@@ -162,6 +165,7 @@ namespace Windows.UI.Xaml
 			return type;
 		}
 
+		#region Capture
 		private void CapturePointerNative(Pointer pointer)
 		{
 			var command = "Uno.UI.WindowManager.current.setPointerCapture(" + HtmlId + ", " + pointer.PointerId + ");";
@@ -173,5 +177,110 @@ namespace Windows.UI.Xaml
 			var command = "Uno.UI.WindowManager.current.releasePointerCapture(" + HtmlId + ", " + pointer.PointerId + ");";
 			WebAssemblyRuntime.InvokeJS(command);
 		}
+		#endregion
+
+		#region HitTestVisibility
+		internal void UpdateHitTest()
+		{
+			this.CoerceValue(HitTestVisibilityProperty);
+		}
+
+		private enum HitTestVisibility
+		{
+			/// <summary>
+			/// The element and its children can't be targeted by hit-testing.
+			/// </summary>
+			/// <remarks>
+			/// This occurs when IsHitTestVisible="False", IsEnabled="False", or Visibility="Collapsed".
+			/// </remarks>
+			Collapsed,
+
+			/// <summary>
+			/// The element can't be targeted by hit-testing.
+			/// </summary>
+			/// <remarks>
+			/// This usually occurs if an element doesn't have a Background/Fill.
+			/// </remarks>
+			Invisible,
+
+			/// <summary>
+			/// The element can be targeted by hit-testing.
+			/// </summary>
+			Visible,
+		}
+
+		/// <summary>
+		/// Represents the final calculated hit-test visibility of the element.
+		/// </summary>
+		/// <remarks>
+		/// This property should never be directly set, and its value should always be calculated through coercion (see <see cref="CoerceHitTestVisibility(DependencyObject, object, bool)"/>.
+		/// </remarks>
+		private static readonly DependencyProperty HitTestVisibilityProperty =
+			DependencyProperty.Register(
+				"HitTestVisibility",
+				typeof(HitTestVisibility),
+				typeof(UIElement),
+				new FrameworkPropertyMetadata(
+					HitTestVisibility.Visible,
+					FrameworkPropertyMetadataOptions.Inherits,
+					coerceValueCallback: (s, e) => CoerceHitTestVisibility(s, e),
+					propertyChangedCallback: (s, e) => OnHitTestVisibilityChanged(s, e)
+				)
+			);
+
+		/// <summary>
+		/// This calculates the final hit-test visibility of an element.
+		/// </summary>
+		/// <returns></returns>
+		private static object CoerceHitTestVisibility(DependencyObject dependencyObject, object baseValue)
+		{
+			var element = (UIElement)dependencyObject;
+
+			// The HitTestVisibilityProperty is never set directly. This means that baseValue is always the result of the parent's CoerceHitTestVisibility.
+			var baseHitTestVisibility = (HitTestVisibility)baseValue;
+
+			// If the parent is collapsed, we should be collapsed as well. This takes priority over everything else, even if we would be visible otherwise.
+			if (baseHitTestVisibility == HitTestVisibility.Collapsed)
+			{
+				return HitTestVisibility.Collapsed;
+			}
+
+			// If we're not locally hit-test visible, visible, or enabled, we should be collapsed. Our children will be collapsed as well.
+			if (!element.IsHitTestVisible || element.Visibility != Visibility.Visible || !element.IsEnabledOverride())
+			{
+				return HitTestVisibility.Collapsed;
+			}
+
+			// If we're not hit (usually means we don't have a Background/Fill), we're invisible. Our children will be visible or not, depending on their state.
+			if (!element.IsViewHit())
+			{
+				return HitTestVisibility.Invisible;
+			}
+
+			// If we're not collapsed or invisible, we can be targeted by hit-testing. This means that we can be the source of pointer events.
+			return HitTestVisibility.Visible;
+		}
+
+		private static void OnHitTestVisibilityChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs args)
+		{
+			if (dependencyObject is UIElement element && args.NewValue is HitTestVisibility hitTestVisibility)
+			{
+				if (hitTestVisibility == HitTestVisibility.Visible)
+				{
+					// By default, elements have 'pointer-event' set to 'auto' (see Uno.UI.css .uno-uielement class).
+					// This means that they can be the target of hit-testing and will raise pointer events when interacted with.
+					// This is aligned with HitTestVisibilityProperty's default value of Visible.
+					element.SetStyle("pointer-events", "auto");
+				}
+				else
+				{
+					// If HitTestVisibilityProperty is calculated to Invisible or Collapsed,
+					// we don't want to be the target of hit-testing and raise any pointer events.
+					// This is done by setting 'pointer-events' to 'none'.
+					element.SetStyle("pointer-events", "none");
+				}
+			}
+		}
+		#endregion
 	}
 }

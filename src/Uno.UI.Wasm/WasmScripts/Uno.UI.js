@@ -802,6 +802,33 @@ var Uno;
                 this.registerEventOnViewInternal(params.HtmlId, params.EventName, params.OnCapturePhase, params.EventFilterName, params.EventExtractorName);
                 return true;
             }
+            isOver(evt, element) {
+                var elt = element;
+                if (elt) {
+                    return evt.offsetX >= 0
+                        && evt.offsetX < elt.offsetWidth
+                        && evt.offsetY >= 0
+                        && evt.offsetY < elt.offsetHeight;
+                }
+                var svg = element;
+                return evt.offsetX >= 0
+                    && evt.offsetX < svg.clientWidth
+                    && evt.offsetY >= 0
+                    && evt.offsetY < svg.clientHeight;
+            }
+            ensureConfirmedEventDequeuing() {
+                if (this._isSubscribedToMove) {
+                    return;
+                }
+                // Register an event listener on move in order to process any pending event (leave).
+                document.addEventListener("pointermove", evt => {
+                    if (this.processPendingEvent) {
+                        this.processPendingEvent(evt);
+                        this.processPendingEvent = null;
+                    }
+                }, true); // in the capture phase to get it as soon as possible, and to make sure to respect the events ordering
+                this._isSubscribedToMove = true;
+            }
             /**
                 * Add an event handler to a html element.
                 *
@@ -810,33 +837,9 @@ var Uno;
                 */
             registerEventOnViewInternal(elementId, eventName, onCapturePhase = false, eventFilterName, eventExtractorName) {
                 const element = this.getView(elementId);
-                const eventFilter = this.getEventFilter(eventFilterName);
                 const eventExtractor = this.getEventExtractor(eventExtractorName);
                 const eventHandler = (event) => {
-                    var pt = event;
-                    var elt = element;
-                    var svg = element;
-                    if (pt && elt) {
-                        console.log(`Raising event ${eventName} on ${elementId} @: ${pt.offsetX}x${pt.offsetY} elt: ${elt.offsetWidth}x${elt.offsetHeight}`);
-                    }
-                    if (pt && svg) {
-                        console.log(`Raising event ${eventName} on ${elementId} @: ${pt.offsetX}x${pt.offsetY} elt: ${svg.clientWidth}x${svg.clientHeight}`);
-                    }
-                    if (pt && elt && eventName == "pointerout" && (pt.offsetX < elt.offsetWidth || pt.offsetX < elt.offsetHeight)) {
-                        console.log("Muted invalid pointerout " + eventName + " on element " + elementId);
-                        return;
-                    }
-                    if (pt && svg && eventName == "pointerout" && (pt.offsetX < svg.clientWidth || pt.offsetX < svg.clientHeight)) {
-                        console.log("Muted invalid pointerout " + eventName + " on element " + elementId);
-                        return;
-                    }
-                    if (eventFilter && !eventFilter(event) && !this._isSettingProperty) {
-                        console.log("Muted event " + eventName + " on element " + elementId);
-                        return;
-                    }
-                    if (!pt) {
-                        console.log("Raising event " + eventName + " on element " + elementId);
-                    }
+                    console.log("Raising event " + eventName + " on element " + elementId);
                     const eventPayload = eventExtractor
                         ? `${eventExtractor(event)}`
                         : "";
@@ -846,10 +849,88 @@ var Uno;
                     }
                 };
                 console.log("Subscribing to event " + eventName + " on element " + elementId);
-                element.addEventListener(eventName, eventHandler, onCapturePhase);
-                if (eventName == "pointerout") {
-                    this.registerEventOnViewInternal(elementId, "pointerleave", onCapturePhase, eventFilterName, eventExtractorName);
+                if (eventName == "pointerleave" /*|| eventName == "pointerenter"*/) {
+                    const leavePointerHandler = (event) => {
+                        const e = event;
+                        // If the element was re-targeted, it's suspicious as the leave event should not bubble
+                        // (does another control which is over the 'element' has been updated, like text or visibility changed ?).
+                        // We need to validate that this event is effectively due to the pointer leaving the control,
+                        // for that we buffer it until the next pointer move.
+                        if (e.explicitOriginalTarget // FF only
+                            && e.explicitOriginalTarget !== event.currentTarget
+                        //&& this.isOver(event as PointerEvent, element)
+                        ) {
+                            console.log("Unexpected pointerleave event, on element " + elementId + ". Mute it.");
+                            //console.log("Unexpected pointerleave event, on element " + elementId + ". Buffer it until next move to confirm the pointer left.");
+                            //this.ensureConfirmedEventDequeuing();
+                            //this.processPendingEvent = (move: PointerEvent) => {
+                            //	// If the next move is effectively out of the element, we can raise the pending leave event
+                            //	if (!this.isOver(move, element)) {
+                            //		console.log("Raising deferred pointerleave on element " + elementId);
+                            //		eventHandler(event);
+                            //	}
+                            //}
+                        }
+                        else {
+                            eventHandler(event);
+                        }
+                    };
+                    element.addEventListener(eventName, leavePointerHandler, onCapturePhase);
                 }
+                else {
+                    element.addEventListener(eventName, eventHandler, onCapturePhase);
+                }
+                //const eventHandler = (event: Event) => {
+                //	//var pt = event as PointerEvent;
+                //	//var elt = element as HTMLElement;
+                //	//var svg = element as SVGElement;
+                //	//if (pt && elt) {
+                //	//	console.log(`Raising event ${eventName} on ${elementId} @: ${pt.offsetX}x${pt.offsetY} elt: ${elt.offsetWidth}x${elt.offsetHeight}`);
+                //	//}
+                //	//if (pt && svg) {
+                //	//	console.log(`Raising event ${eventName} on ${elementId} @: ${pt.offsetX}x${pt.offsetY} elt: ${svg.clientWidth}x${svg.clientHeight}`);
+                //	//}
+                //	if (eventName == "pointerleave"
+                //		// Do not allow re-targeted events
+                //		&& this.isReTargeted(event)
+                //		// But only if the pointer is over the element (otherwise the pointer obviously leaved element, so it's legit for the event to have been re-targeted)
+                //		&& this.isOutOfElement(pt, element))
+                //	{
+                //		this.processPendingEvent = this.confirmLeaveEvent(pt, element);
+                //		console.log(`Ignoring leave event  ${eventName} on ${elementId} (@: ${pt.offsetX}x${pt.offsetY} elt: ${svg.clientWidth}x${svg.clientHeight} / origin: ${(event as any).explicitOriginalTarget.getAttribute('xamlname')} / current: ${(event.currentTarget as any).getAttribute('xamlname')})`);
+                //		return;
+                //	}
+                //	//if (pt && elt && eventName == "pointerout" && (pt.offsetX < elt.offsetWidth || pt.offsetX < elt.offsetHeight)) {
+                //	//	console.log("Muted invalid pointerout " + eventName + " on element " + elementId);
+                //	//	return;
+                //	//}
+                //	//if (pt && svg && eventName == "pointerout" && (pt.offsetX < svg.clientWidth || pt.offsetX < svg.clientHeight)) {
+                //	//	console.log("Muted invalid pointerout " + eventName + " on element " + elementId);
+                //	//	return;
+                //	//}
+                //	//if (eventFilter && !eventFilter(event) && !this._isSettingProperty) {
+                //	//	console.log("Muted event " + eventName + " on element " + elementId);
+                //	//	return;
+                //	//}
+                //	//if (!pt) {
+                //	//}
+                //	//console.log("Raising event " + eventName + " on element " + elementId);
+                //	//const eventPayload = eventExtractor
+                //	//	? `${eventExtractor(event)}`
+                //	//	: "";
+                //	//var handled = this.dispatchEvent(element, eventName, eventPayload);
+                //	//if (handled) {
+                //	//	event.stopPropagation();
+                //	//}
+                //	raiseEvent()
+                //};
+                //console.log("Subscribing to event " + eventName + " on element " + elementId);
+                //element.addEventListener(eventName, eventHandler, onCapturePhase);
+                //if (eventName == "pointerout") {
+                //	this.registerEventOnViewInternal(elementId, "pointerleave", onCapturePhase, eventFilterName, eventExtractorName);
+                //}
+            }
+            raiseEvent(eventName, element, elementId, eventExtractor) {
             }
             /**
              * left pointer event filter to be used with registerEventOnView

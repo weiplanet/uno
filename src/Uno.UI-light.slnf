@@ -1,0 +1,16 @@
+{
+  "solution": {
+    "path": "Uno.UI.sln",
+    "projects": [
+      "..\\build\\Uno.UI.Build.csproj",
+      "SourceGenerators\\Uno.UI.SourceGenerators\\Uno.UI.SourceGenerators.csproj",
+      "SourceGenerators\\Uno.UI.Tasks\\Uno.UI.Tasks.csproj",
+      "Uno.Foundation\\Uno.Foundation.csproj",
+      "Uno.UI.BindingHelper.Android\\Uno.UI.BindingHelper.Android.csproj",
+      "Uno.UI.Toolkit\\Uno.UI.Toolkit.csproj",
+      "Uno.UI.Wasm\\Uno.UI.Wasm.csproj",
+      "Uno.UI\\Uno.UI.csproj",
+      "Uno.UWP\\Uno.csproj"
+    ]
+  }
+}

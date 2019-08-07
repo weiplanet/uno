@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using Windows.UI.Input;
 using Windows.UI.Xaml.Input;
@@ -213,12 +214,17 @@ namespace Windows.UI.Xaml
 			var isOver = IsOver(args.Pointer);
 			var isCaptured = IsCaptured(args.Pointer);
 
-			// we are receiving an unexpected up for this pointer on this control, handle it a cancel event in order to properly
-			// update the state without raising invalid events (this is the case on iOS which implicitly captures pointers).
+			// We are receiving an unexpected move for this pointer on this element,
+			// we mute it to avoid invalid event sequence.
+			// Notes:
+			//   iOS:  This may happen on iOS where the pointers are implicitly captured.
+			//   WASM: On wasm, if this check mutes your event, it's because you didn't received the "pointerenter" (not bubbling natively).
+			//         This is usually because your control is covered by an element which is IsHitTestVisible == true.
 			var isIrrelevant = !isOver && !isCaptured;
-
 			if (isIrrelevant)
 			{
+				Debug.WriteLine("IGNORE MOVE");
+
 				return handledInManaged; // Always false
 			}
 

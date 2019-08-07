@@ -5,6 +5,8 @@
 	xmlns:local="using:UITests.Shared.Windows_UI_Xaml_Input.RoutedEvents">
 
 	<Grid>
+		<Border x:Name="_flashingZone" Margin="100" Width="200" Height="200" VerticalAlignment="Top" HorizontalAlignment="Right" Background="DeepPink" />
+
 		<!--<ScrollViewer>-->
 			<Grid x:Name="_touchTarget" MinHeight="2048">
 				<TextBlock FontSize="8" x:Name="_output" />
