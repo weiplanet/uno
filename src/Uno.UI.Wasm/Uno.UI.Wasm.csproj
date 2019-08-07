@@ -51,6 +51,7 @@
 	</ItemGroup>
 	<ItemGroup>
 	  <Folder Include="tsBindings\" />
+	  <Folder Include="ts\Extensions\" />
 	</ItemGroup>
 
 	<Import Project="..\Uno.CrossTargetting.props" />

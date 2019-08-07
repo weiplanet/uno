@@ -21,7 +21,7 @@ body {
   position: absolute;
   display: inline;
   outline: none;
-  pointer-events: auto;
+  pointer-events: visiblePainted;
   /*
     Those are required for measure/arrange to behave well:
     margin & padding are calculated through Xaml elements.
@@ -36,7 +36,6 @@ body {
   -webkit-box-sizing: border-box !important;
   -moz-box-sizing: border-box !important;
   box-sizing: border-box !important;
-
   /*
     Force all element to have a transform, to allow correct measure of text and images.
     See WindowManager.ts on measureViewInternal() for more details.

@@ -324,6 +324,7 @@ declare namespace Uno.UI {
         registerEventOnViewNative(pParams: number): boolean;
         private processPendingEvent;
         private isOver;
+        private isOverDeep;
         private _isSubscribedToMove;
         private ensureConfirmedEventDequeuing;
         /**

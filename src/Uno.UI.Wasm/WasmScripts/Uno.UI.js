@@ -803,18 +803,26 @@ var Uno;
                 return true;
             }
             isOver(evt, element) {
-                var elt = element;
-                if (elt) {
-                    return evt.offsetX >= 0
-                        && evt.offsetX < elt.offsetWidth
-                        && evt.offsetY >= 0
-                        && evt.offsetY < elt.offsetHeight;
+                const bounds = element.getBoundingClientRect();
+                return evt.pageX >= bounds.left
+                    && evt.pageX < bounds.right
+                    && evt.pageY >= bounds.top
+                    && evt.pageY < bounds.bottom;
+            }
+            isOverDeep(evt, element) {
+                if (!element) {
+                    return false;
                 }
-                var svg = element;
-                return evt.offsetX >= 0
-                    && evt.offsetX < svg.clientWidth
-                    && evt.offsetY >= 0
-                    && evt.offsetY < svg.clientHeight;
+                else if (element.style.pointerEvents != "none") {
+                    return this.isOver(evt, element);
+                }
+                else {
+                    for (let elt of element.children) {
+                        if (this.isOverDeep(evt, elt)) {
+                            return true;
+                        }
+                    }
+                }
             }
             ensureConfirmedEventDequeuing() {
                 if (this._isSubscribedToMove) {
@@ -824,7 +832,7 @@ var Uno;
                 document.addEventListener("pointermove", evt => {
                     if (this.processPendingEvent) {
                         this.processPendingEvent(evt);
-                        this.processPendingEvent = null;
+                        //this.processPendingEvent = null;
                     }
                 }, true); // in the capture phase to get it as soon as possible, and to make sure to respect the events ordering
                 this._isSubscribedToMove = true;
@@ -849,7 +857,49 @@ var Uno;
                     }
                 };
                 console.log("Subscribing to event " + eventName + " on element " + elementId);
-                if (eventName == "pointerleave" /*|| eventName == "pointerenter"*/) {
+                if (eventName == "pointerenter") {
+                    const leavePointerHandler = (event) => {
+                        const e = event;
+                        // If the element was re-targeted, it's suspicious as the leave event should not bubble
+                        // (does another control which is over the 'element' has been updated, like text or visibility changed ?).
+                        // We need to validate that this event is effectively due to the pointer leaving the control,
+                        // for that we buffer it until the next pointer move.
+                        if (e.explicitOriginalTarget // FF only
+                        //&& e.explicitOriginalTarget !== event.currentTarget
+                        //&& this.isOver(event as PointerEvent, element)
+                        ) {
+                            const evt = event;
+                            for (let elt of document.elementsFromPoint(evt.pageX, evt.pageY)) {
+                                if (elt == element) {
+                                    eventHandler(event);
+                                    return;
+                                }
+                                let htmlElt = elt;
+                                if (htmlElt.style.pointerEvents != "none") {
+                                    // This htmlElt should not have received this event ... (kind of invalid bubbling on FF only)
+                                    // Let validate if this is because this htmlElt is one of our child, if so its legit to receive
+                                    // this event for the "element"
+                                    while (htmlElt.parentElement) {
+                                        htmlElt = htmlElt.parentElement;
+                                        if (htmlElt == element) {
+                                            eventHandler(event);
+                                            return;
+                                        }
+                                    }
+                                    // We found an element this is capable to handle the pointers but which is not one of our child
+                                    // (probably a sibling which is covering the element). It means that the pointerEnter/Leave should
+                                    // not have bubble to the element, and we can mute it.
+                                    return;
+                                }
+                            }
+                        }
+                        else {
+                            eventHandler(event);
+                        }
+                    };
+                    element.addEventListener(eventName, leavePointerHandler, onCapturePhase);
+                }
+                else if (eventName == "pointerleave") {
                     const leavePointerHandler = (event) => {
                         const e = event;
                         // If the element was re-targeted, it's suspicious as the leave event should not bubble
@@ -858,18 +908,32 @@ var Uno;
                         // for that we buffer it until the next pointer move.
                         if (e.explicitOriginalTarget // FF only
                             && e.explicitOriginalTarget !== event.currentTarget
-                        //&& this.isOver(event as PointerEvent, element)
-                        ) {
-                            console.log("Unexpected pointerleave event, on element " + elementId + ". Mute it.");
-                            //console.log("Unexpected pointerleave event, on element " + elementId + ". Buffer it until next move to confirm the pointer left.");
-                            //this.ensureConfirmedEventDequeuing();
-                            //this.processPendingEvent = (move: PointerEvent) => {
-                            //	// If the next move is effectively out of the element, we can raise the pending leave event
-                            //	if (!this.isOver(move, element)) {
-                            //		console.log("Raising deferred pointerleave on element " + elementId);
-                            //		eventHandler(event);
-                            //	}
-                            //}
+                            && this.isOver(event, element)) {
+                            //console.log("Unexpected pointerleave event, on element " + elementId + ". Mute it.");
+                            console.log("Unexpected pointerleave event, on element " + elementId + ". Buffer it until next move to confirm the pointer left.");
+                            var attempt = 0;
+                            this.ensureConfirmedEventDequeuing();
+                            this.processPendingEvent = (move) => {
+                                // If the next move is effectively out of the element, we can raise the pending leave event
+                                //const children = element.children;
+                                //for (let child in element.children) {
+                                //	if (child.style.pointerEvents != "none"
+                                //}
+                                //for (var i = 0; i < LENGTH; i++) {
+                                //}
+                                if (!this.isOverDeep(move, element)) {
+                                    console.log("Raising deferred pointerleave on element " + elementId);
+                                    eventHandler(event);
+                                    this.processPendingEvent = null;
+                                }
+                                else if (++attempt > 2) {
+                                    console.log("Drop deferred pointerleave on element " + elementId);
+                                    this.processPendingEvent = null;
+                                }
+                                else {
+                                    console.log("Requeue deferred pointerleave on element " + elementId);
+                                }
+                            };
                         }
                         else {
                             eventHandler(event);
