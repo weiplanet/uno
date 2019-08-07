@@ -802,28 +802,6 @@ var Uno;
                 this.registerEventOnViewInternal(params.HtmlId, params.EventName, params.OnCapturePhase, params.EventFilterName, params.EventExtractorName);
                 return true;
             }
-            isOver(evt, element) {
-                const bounds = element.getBoundingClientRect();
-                return evt.pageX >= bounds.left
-                    && evt.pageX < bounds.right
-                    && evt.pageY >= bounds.top
-                    && evt.pageY < bounds.bottom;
-            }
-            isOverDeep(evt, element) {
-                if (!element) {
-                    return false;
-                }
-                else if (element.style.pointerEvents != "none") {
-                    return this.isOver(evt, element);
-                }
-                else {
-                    for (let elt of element.children) {
-                        if (this.isOverDeep(evt, elt)) {
-                            return true;
-                        }
-                    }
-                }
-            }
             ensureConfirmedEventDequeuing() {
                 if (this._isSubscribedToMove) {
                     return;
@@ -908,8 +886,7 @@ var Uno;
                         // for that we buffer it until the next pointer move.
                         if (e.explicitOriginalTarget // FF only
                             && e.explicitOriginalTarget !== event.currentTarget
-                            && this.isOver(event, element)) {
-                            //console.log("Unexpected pointerleave event, on element " + elementId + ". Mute it.");
+                            && event.isOver(element)) {
                             console.log("Unexpected pointerleave event, on element " + elementId + ". Buffer it until next move to confirm the pointer left.");
                             var attempt = 0;
                             this.ensureConfirmedEventDequeuing();
@@ -921,7 +898,7 @@ var Uno;
                                 //}
                                 //for (var i = 0; i < LENGTH; i++) {
                                 //}
-                                if (!this.isOverDeep(move, element)) {
+                                if (!move.isOverDeep(element)) {
                                     console.log("Raising deferred pointerleave on element " + elementId);
                                     eventHandler(event);
                                     this.processPendingEvent = null;
@@ -2180,6 +2157,42 @@ class WindowManagerSetXUidParams {
         return ret;
     }
 }
+var Uno;
+(function (Uno) {
+    var UI;
+    (function (UI) {
+        var Extensions;
+        (function (Extensions) {
+            class PointerPointExtensions {
+                static isOver(element) {
+                    const bounds = element.getBoundingClientRect();
+                    return this.pageX >= bounds.left
+                        && this.pageX < bounds.right
+                        && this.pageY >= bounds.top
+                        && this.pageY < bounds.bottom;
+                }
+                static isOverDeep(element) {
+                    if (!element) {
+                        return false;
+                    }
+                    else if (element.style.pointerEvents != "none") {
+                        return this.isOver(element);
+                    }
+                    else {
+                        for (let elt of element.children) {
+                            if (this.isOverDeep(elt)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            Extensions.PointerPointExtensions = PointerPointExtensions;
+        })(Extensions = UI.Extensions || (UI.Extensions = {}));
+    })(UI = Uno.UI || (Uno.UI = {}));
+})(Uno || (Uno = {}));
+PointerEvent.prototype.isOver = Uno.UI.Extensions.PointerPointExtensions.isOver;
+PointerEvent.prototype.isOverDeep = Uno.UI.Extensions.PointerPointExtensions.isOverDeep;
 var Uno;
 (function (Uno) {
     var Foundation;

@@ -659,34 +659,15 @@
 			return true;
 		}
 
-		private processPendingEvent: (evt: PointerEvent) => void;
+		private processPendingLeaveEvent: (evt: PointerEvent) => void;
 
-		private isOver(evt: PointerEvent, element: HTMLElement | SVGElement) {
-			const bounds = element.getBoundingClientRect();
+		private _isPendingLeaveProcessingEnabled: boolean;
 
-			return evt.pageX >= bounds.left
-				&& evt.pageX < bounds.right
-				&& evt.pageY >= bounds.top
-				&& evt.pageY < bounds.bottom;
-		}
-
-		private isOverDeep(evt: PointerEvent, element: HTMLElement | SVGElement) {
-			if (!element) {
-				return false;
-			} else if (element.style.pointerEvents != "none") {
-				return this.isOver(evt, element);
-			} else {
-				for (let elt of element.children) {
-					if (this.isOverDeep(evt, elt as HTMLElement | SVGElement)) {
-						return true;
-					}
-				}
-			}
-		}
-
-		private _isSubscribedToMove: boolean;
-		private ensureConfirmedEventDequeuing() {
-			if (this._isSubscribedToMove) {
+		/**
+		 * Ensure that any pending leave event are going to be processed (cf @see processPendingLeaveEvent )
+		 */
+		private ensurePendingLeaveEventProcessing() {
+			if (this._isPendingLeaveProcessingEnabled) {
 				return;
 			}
 
@@ -694,13 +675,12 @@
 			document.addEventListener(
 				"pointermove",
 				evt => {
-					if (this.processPendingEvent) {
-						this.processPendingEvent(evt as PointerEvent);
-						//this.processPendingEvent = null;
+					if (this.processPendingLeaveEvent) {
+						this.processPendingLeaveEvent(evt as PointerEvent);
 					}
 				},
 				true); // in the capture phase to get it as soon as possible, and to make sure to respect the events ordering
-			this._isSubscribedToMove = true;
+			this._isPendingLeaveProcessingEnabled = true;
 		}
 
 		/**
@@ -718,7 +698,6 @@
 		): void {
 			const element = this.getView(elementId);
 			const eventExtractor = this.getEventExtractor(eventExtractorName);
-
 			const eventHandler = (event: Event) => {
 				console.log("Raising event " + eventName + " on element " + elementId);
 
@@ -735,30 +714,30 @@
 			console.log("Subscribing to event " + eventName + " on element " + elementId);
 
 			if (eventName == "pointerenter") {
-				const leavePointerHandler = (event: Event) => {
+				const enterPointerHandler = (event: Event) => {
 					const e = event as any;
 
-					// If the element was re-targeted, it's suspicious as the leave event should not bubble
-					// (does another control which is over the 'element' has been updated, like text or visibility changed ?).
-					// We need to validate that this event is effectively due to the pointer leaving the control,
-					// for that we buffer it until the next pointer move.
-					if (e.explicitOriginalTarget // FF only
-						//&& e.explicitOriginalTarget !== event.currentTarget
-						//&& this.isOver(event as PointerEvent, element)
-						) {
+					if (e.explicitOriginalTarget) { // FF only
+
+						// It happens on FF that when another control which is over the 'element' has been updated, like text or visibility changed,
+						// we receive a pointer enter/leave of an element which is under an element that is capable to handle pointers,
+						// which is unexpected as the "pointerenter" should not bubble.
+						// So we have to validate that this event is effectively due to the pointer entering the control.
+						// We achieve this by browsing up the elements under the pointer (** not the visual tree**) 
 
 						const evt = event as PointerEvent;
 						for (let elt of document.elementsFromPoint(evt.pageX, evt.pageY)) {
 							if (elt == element) {
+								// We found our target element, we can raise the event and stop the loop
 								eventHandler(event);
-								return ;
+								return;
 							}
 
 							let htmlElt = elt as HTMLElement;
 							if (htmlElt.style.pointerEvents != "none") {
-								// This htmlElt should not have received this event ... (kind of invalid bubbling on FF only)
-								// Let validate if this is because this htmlElt is one of our child, if so its legit to receive
-								// this event for the "element"
+								// This 'htmlElt' is handling the pointers events, this mean that we can stop the loop.
+								// However, if this 'htmlElt' is one of our child it means that the event was legitimate
+								// and we have to raise it for the 'element'.
 								while (htmlElt.parentElement) {
 									htmlElt = htmlElt.parentElement;
 									if (htmlElt == element) {
@@ -778,40 +757,35 @@
 					}
 				}
 
-				element.addEventListener(eventName, leavePointerHandler, onCapturePhase);
+				element.addEventListener(eventName, enterPointerHandler, onCapturePhase);
 			} else if (eventName == "pointerleave") {
 				const leavePointerHandler = (event: Event) => {
 					const e = event as any;
 
-					// If the element was re-targeted, it's suspicious as the leave event should not bubble
-					// (does another control which is over the 'element' has been updated, like text or visibility changed ?).
-					// We need to validate that this event is effectively due to the pointer leaving the control,
-					// for that we buffer it until the next pointer move.
 					if (e.explicitOriginalTarget // FF only
 						&& e.explicitOriginalTarget !== event.currentTarget
-						&& this.isOver(event as PointerEvent, element)
-					) {
-						console.log("Unexpected pointerleave event, on element " + elementId + ". Buffer it until next move to confirm the pointer left.");
-						var attempt = 0;
+						&& (event as PointerEvent).isOver(element)) {
 
-						this.ensureConfirmedEventDequeuing();
-						this.processPendingEvent = (move: PointerEvent) => {
-							// If the next move is effectively out of the element, we can raise the pending leave event
-							//const children = element.children;
-							//for (let child in element.children) {
-							//	if (child.style.pointerEvents != "none"
-							//}
-							//for (var i = 0; i < LENGTH; i++) {
-								
-							//}
+						// If the event was re-targeted, it's suspicious as the leave event should not bubble
+						// This happens on FF when another control which is over the 'element' has been updated, like text or visibility changed.
+						// So we have to validate that this event is effectively due to the pointer leaving the element.
+						// We achieve that by buffering it until the next few 'pointermove' on document for which we validate the new pointer location.
 
-							if (!this.isOverDeep(move, element)) {
+						// It's common to get a move right after the leave with the same pointer's location,
+						// so we wait up to 3 pointer move before dropping the leave event.
+						var attempt = 3;
+
+						this.ensurePendingLeaveEventProcessing();
+						this.processPendingLeaveEvent = (move: PointerEvent) => {
+							if (!move.isOverDeep(element)) {
 								console.log("Raising deferred pointerleave on element " + elementId);
 								eventHandler(event);
-								this.processPendingEvent = null;
-							} else if (++attempt > 2) {
+
+								this.processPendingLeaveEvent = null;
+							} else if (--attempt <= 0) {
 								console.log("Drop deferred pointerleave on element " + elementId);
-								this.processPendingEvent = null;
+
+								this.processPendingLeaveEvent = null;
 							} else {
 								console.log("Requeue deferred pointerleave on element " + elementId);
 							}
@@ -826,76 +800,6 @@
 			} else {
 				element.addEventListener(eventName, eventHandler, onCapturePhase);
 			}
-
-			//const eventHandler = (event: Event) => {
-			//	//var pt = event as PointerEvent;
-				
-
-			//	//var elt = element as HTMLElement;
-			//	//var svg = element as SVGElement;
-			//	//if (pt && elt) {
-			//	//	console.log(`Raising event ${eventName} on ${elementId} @: ${pt.offsetX}x${pt.offsetY} elt: ${elt.offsetWidth}x${elt.offsetHeight}`);
-			//	//}
-			//	//if (pt && svg) {
-			//	//	console.log(`Raising event ${eventName} on ${elementId} @: ${pt.offsetX}x${pt.offsetY} elt: ${svg.clientWidth}x${svg.clientHeight}`);
-			//	//}
-
-				
-
-			//	if (eventName == "pointerleave"
-			//		// Do not allow re-targeted events
-			//		&& this.isReTargeted(event)
-
-			//		// But only if the pointer is over the element (otherwise the pointer obviously leaved element, so it's legit for the event to have been re-targeted)
-			//		&& this.isOutOfElement(pt, element))
-			//	{
-			//		this.processPendingEvent = this.confirmLeaveEvent(pt, element);
-			//		console.log(`Ignoring leave event  ${eventName} on ${elementId} (@: ${pt.offsetX}x${pt.offsetY} elt: ${svg.clientWidth}x${svg.clientHeight} / origin: ${(event as any).explicitOriginalTarget.getAttribute('xamlname')} / current: ${(event.currentTarget as any).getAttribute('xamlname')})`);
-			//		return;
-			//	}
-			//	//if (pt && elt && eventName == "pointerout" && (pt.offsetX < elt.offsetWidth || pt.offsetX < elt.offsetHeight)) {
-			//	//	console.log("Muted invalid pointerout " + eventName + " on element " + elementId);
-			//	//	return;
-			//	//}
-			//	//if (pt && svg && eventName == "pointerout" && (pt.offsetX < svg.clientWidth || pt.offsetX < svg.clientHeight)) {
-			//	//	console.log("Muted invalid pointerout " + eventName + " on element " + elementId);
-			//	//	return;
-			//	//}
-
-			//	//if (eventFilter && !eventFilter(event) && !this._isSettingProperty) {
-			//	//	console.log("Muted event " + eventName + " on element " + elementId);
-			//	//	return;
-			//	//}
-
-			//	//if (!pt) {
-				
-			//	//}
-
-			//	//console.log("Raising event " + eventName + " on element " + elementId);
-
-			//	//const eventPayload = eventExtractor
-			//	//	? `${eventExtractor(event)}`
-			//	//	: "";
-
-			//	//var handled = this.dispatchEvent(element, eventName, eventPayload);
-			//	//if (handled) {
-			//	//	event.stopPropagation();
-			//	//}
-
-			//	raiseEvent()
-			//};
-
-			//console.log("Subscribing to event " + eventName + " on element " + elementId);
-
-			//element.addEventListener(eventName, eventHandler, onCapturePhase);
-
-			//if (eventName == "pointerout") {
-			//	this.registerEventOnViewInternal(elementId, "pointerleave", onCapturePhase, eventFilterName, eventExtractorName);
-			//}
-		}
-
-		private raiseEvent(eventName: string, element: HTMLElement | SVGElement, elementId: string, eventExtractor: (evt: Event) => string) {
-			
 		}
 
 		/**
