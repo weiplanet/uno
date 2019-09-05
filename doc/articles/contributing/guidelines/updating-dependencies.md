@@ -8,7 +8,7 @@ These dependencies don't change the public API surface and are typically safe to
 
 - BenchmarkDotNet
 - [FluentAssertions](https://github.com/unoplatform/uno/pull/1196)
-- NUnit3TestAdapter 
+- [NUnit3TestAdapter](https://github.com/unoplatform/uno/pull/1455) 
 - [NUnit.Runners](https://github.com/unoplatform/uno/pull/1122)
 - [Microsoft.AppCenter](https://github.com/unoplatform/uno/pull/1175)
 - [Microsoft.SourceLink.GitHub](https://github.com/unoplatform/uno/pull/1204)
