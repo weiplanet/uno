@@ -42,6 +42,7 @@ These dependancies require care and human testing:
 - [Microsoft.CodeAnalysis.*](https://github.com/unoplatform/uno/pull/1169) children packages needs to be aligned with the other `Microsoft.CodeAnalysis` packages.
 - [Microsoft.Build.*](https://github.com/unoplatform/uno/pull/1169) children packages needs to be aligned with the other `Microsoft.Build` packages, and need to be aligned with `Uno.SourceGenerationTasks` package features.
 - [Microsoft.Extensions.Logging.*](https://github.com/unoplatform/uno/pull/1108/files#r300432589) child packages needs to be aligned with the other `Microsoft.Extensions.Logging` packages. Currently can't be upgraded because most recent versions are using thread, which are not supported on Wasm.
+- [Microsoft.UI.Xaml](https://github.com/unoplatform/uno/pull/1503): This dependency is needs to be aligned with the currently supported API set found in Uno.
 
 These dependencies require care and human testing to confirm compatibility with webassembly:
 
