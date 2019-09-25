@@ -14,4 +14,4 @@ You can also post your question in the [Uno gitter room](https://gitter.im/uno-p
 
 For organizations that want a deeper level of support beyond our community support, please [contact us](https://platform.uno/contact/). Our professional support is more than a contract – it is a shared responsibility for your project success. Our engineering team will collaborate with you to ensure the success of your projects, and our custom application development team at nventive is also available to lend its expertise.
 
-If the matter is security related, please disclose it privately via https://github.com/nventive/Uno/security/ -->
+If the matter is security related, please disclose it privately via https://github.com/unoplatform/Uno/security/ -->
