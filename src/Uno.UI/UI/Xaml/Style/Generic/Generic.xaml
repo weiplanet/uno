@@ -1802,7 +1802,53 @@
 	<xamarin:Style TargetType="GridViewItem"
 				   BasedOn="{StaticResource GridViewItemExpanded}" />
 
-		<!--Default style for TimePickerSelector - Xamarin-only control internal to TimePickerFlyout-->
+	<!-- Default ios DatePickerFlyoutPresenterStyle -->
+	<ios:Style TargetType="DatePickerFlyoutPresenter">
+		<Setter Property="RequestedTheme"
+				Value="Light" />
+		<Setter Property="Background"
+				Value="Gray" />
+		<Setter Property="HorizontalContentAlignment"
+				Value="Stretch" />
+		<Setter Property="VerticalContentAlignment"
+				Value="Bottom" />
+		<Setter Property="HorizontalAlignment"
+				Value="Stretch" />
+		<Setter Property="VerticalAlignment"
+				Value="Bottom" />
+		<Setter Property="IsTabStop"
+				Value="False" />
+		<Setter Property="BorderThickness"
+				Value="0" />
+		<Setter Property="Padding"
+				Value="10" />
+		<Setter Property="MinWidth"
+				Value="50" />
+		<Setter Property="MinHeight"
+				Value="30" />
+		<!-- Uno issue forces us to max out width and height.... without it presenter is not seen -->
+		<Setter Property="Width"
+				Value="5000" />
+		<Setter Property="Height"
+				Value="10000" />
+		<Setter Property="ScrollViewer.HorizontalScrollMode"
+				Value="Auto" />
+		<win:Setter Property="ScrollViewer.HorizontalScrollBarVisibility"
+					Value="Auto" />
+		<Setter Property="ScrollViewer.VerticalScrollMode"
+				Value="Auto" />
+		<win:Setter Property="ScrollViewer.VerticalScrollBarVisibility"
+					Value="Auto" />
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="DatePickerFlyoutPresenter">
+					<ContentPresenter Content="{TemplateBinding Content}" />
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</ios:Style>
+
+	<!--Default style for TimePickerSelector - Xamarin-only control internal to TimePickerFlyout-->
 	<xamarin:Style TargetType="TimePickerSelector">
 		<ios:Setter Property="Template">
 			<Setter.Value>
