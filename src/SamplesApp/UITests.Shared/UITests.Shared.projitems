@@ -309,6 +309,10 @@
       <SubType>Designer</SubType>	
       <Generator>MSBuild:Compile</Generator>	
     </Page>	
+	<Page Include="$(MSBuildThisFileDirectory)Windows_UI_Xaml_Controls\DatePicker\DatePickerFlyout_MinYear.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="$(MSBuildThisFileDirectory)Windows_UI_Xaml_Controls\ContentPresenter\ContentPresenter_Template.xaml">	
       <SubType>Designer</SubType>	
       <Generator>MSBuild:Compile</Generator>	
@@ -2647,6 +2651,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Windows_UI_Xaml_Controls\ContentDialogTests\ComboBoxContentDialog.xaml.cs">	
       <DependentUpon>ComboBoxContentDialog.xaml</DependentUpon>	
     </Compile>	
+	<Compile Include="$(MSBuildThisFileDirectory)Windows_UI_Xaml_Controls\DatePicker\DatePickerFlyout_MinYear.xaml.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Windows_UI_Xaml_Controls\ContentDialogTests\ContentDialog_Closing.xaml.cs">	
       <DependentUpon>ContentDialog_Closing.xaml</DependentUpon>	
     </Compile>	
@@ -4546,6 +4551,9 @@
     <Compile Update="$(MSBuildThisFileDirectory)Windows_UI_Xaml_Controls\ScrollViewerTests\ScrollViewer_Simple.xaml.cs">	
       <DependentUpon>ScrollViewer_Simple.xaml</DependentUpon>	
     </Compile>	
+	<Compile Update="C:\P\uno2\src\SamplesApp\UITests.Shared\Windows_UI_Xaml_Controls\DatePicker\DatePickerFlyout_MinYear.xaml.cs">
+      <DependentUpon>DatePickerFlyout_MinYear.xaml</DependentUpon>
+    </Compile>
     <Compile Update="$(MSBuildThisFileDirectory)Windows_UI_Xaml_Controls\DatePicker\DatePickerFlyout_Automated.xaml.cs">	
       <DependentUpon>DatePickerFlyout_Automated.xaml</DependentUpon>	
     </Compile>	
