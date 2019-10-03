@@ -19,6 +19,12 @@ This mode replicates **UWP**'s `CommandBar`. It is templatable and supports a te
 
 ![](Assets/CommandBar/windows/example.png)
 
+#### Usage Example
+
+```cs
+<Style TargetType="CommandBar" BasedOn="XamlDefaultCommandBar" />
+```
+
 #### Remarks
 
 * This mode hasn't been extensively tested. 
@@ -38,6 +44,12 @@ This mode is the preferred one and is enabled by default. It uses platform-speci
 | iOS      | `UINavigationBar` | Transitions when navigating  between pages.   |
 
 The rest of this document will exclusively cover this mode.
+
+#### Usage Example
+
+```cs
+<Style TargetType="CommandBar" BasedOn="NativeDefaultCommandBar" />
+```
 
 #### Remarks
 
@@ -300,7 +312,7 @@ To ensure everything works properly, you must follow a few rules:
 
 ## Extensibility
 
-The `CommandBar` it automatically managed by the `Frame` control, however you can still use the "native" mode of the `CommandBar` with your own navigation mechanisim.
+The `CommandBar` it automatically managed by the `Frame` control, however you can still use the "native" mode of the `CommandBar` with your own navigation mechanism.
 
 On **iOS** a `CommandBarHelper` is available for this purpose, you only have to invoke each of the provided method in your own `UIViewController` implementation.
 
