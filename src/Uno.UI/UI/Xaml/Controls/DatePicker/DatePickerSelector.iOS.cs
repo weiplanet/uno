@@ -67,10 +67,17 @@ namespace Windows.UI.Xaml.Controls
 			// Animate to cover up the small delay in setting the date when the flyout is opened
 			var animated = !UIDevice.CurrentDevice.CheckSystemVersion(10, 0);
 
-			_picker?.SetDate(
-				DateTime.SpecifyKind(newDate.DateTime, DateTimeKind.Local).ToNSDate(),
-				animated: animated
-			);
+			if (newDate.CompareTo(MinYear) < 0 || newDate.CompareTo(MaxYear) > 0)
+			{
+				Date = oldDate;
+			}
+			else
+			{
+				_picker?.SetDate(
+					DateTime.SpecifyKind(newDate.DateTime, DateTimeKind.Local).ToNSDate(),
+					animated: animated
+				);
+			}
 		}
 
 		partial void OnMinYearChangedPartialNative(DateTimeOffset oldMinYear, DateTimeOffset newMinYear)
@@ -97,7 +104,7 @@ namespace Windows.UI.Xaml.Controls
 			{
 				return;
 			}
-			
+
 			var calendar = new NSCalendar(NSCalendarType.Gregorian);
 			var maximumDateComponents = new NSDateComponents
 			{
