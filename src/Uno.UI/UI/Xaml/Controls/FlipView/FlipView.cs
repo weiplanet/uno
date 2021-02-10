@@ -13,7 +13,7 @@ namespace Windows.UI.Xaml.Controls
 	{
 		public FlipView()
 		{
-			this.RegisterDisposablePropertyChangedCallback(SelectedIndexProperty, (s, e) => (s as FlipView)?.OnSelectedIndexChanged((int)e.OldValue, (int)e.NewValue));
+			DefaultStyleKey = typeof(FlipView);
 		}
 
 		public bool UseTouchAnimationsForAllNavigation
@@ -23,8 +23,8 @@ namespace Windows.UI.Xaml.Controls
 		}
 
 		// Using a DependencyProperty as the backing store for UseTouchAnimationsForAllNavigation.  This enables animation, styling, binding, etc...
-		public static readonly DependencyProperty UseTouchAnimationsForAllNavigationProperty =
-			DependencyProperty.Register("UseTouchAnimationsForAllNavigation", typeof(bool), typeof(FlipView), new PropertyMetadata(true));
+		public static DependencyProperty UseTouchAnimationsForAllNavigationProperty { get ; } =
+			DependencyProperty.Register("UseTouchAnimationsForAllNavigation", typeof(bool), typeof(FlipView), new FrameworkPropertyMetadata(true));
 
 		protected override void OnItemsSourceChanged(DependencyPropertyChangedEventArgs e)
 		{
@@ -46,8 +46,10 @@ namespace Windows.UI.Xaml.Controls
 			}
 		}
 
-		private void OnSelectedIndexChanged(int oldValue, int newValue)
+		internal override void OnSelectedIndexChanged(int oldValue, int newValue)
 		{
+			base.OnSelectedIndexChanged(oldValue, newValue);
+
 			// Never animate for changes greater than next/previous item
 			var smallChange = Math.Abs(newValue - oldValue) <= 1;
 			OnSelectedIndexChangedPartial(oldValue, newValue, smallChange && UseTouchAnimationsForAllNavigation);

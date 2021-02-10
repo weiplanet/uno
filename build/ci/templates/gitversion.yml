@@ -1,0 +1,29 @@
+
+steps:
+
+  # This step changes the PR version ID so that produced nuget packages can be tied
+  # to specific builds. This can be used to create canaries from PR artifacts.
+  - powershell: |
+      $PR_VERSION="PullRequest-$env:SYSTEM_PULLREQUEST_PULLREQUESTNUMBER-$env:BUILD_BUILDID-$env:SYSTEM_JOBATTEMPT-"
+      echo "Updating PR Version Tag in GitVersion to $PR_VERSION"
+      (Get-Content GitVersion.yml).replace("'PullRequest'", "$PR_VERSION") | Set-Content GitVersion.yml
+
+    condition: eq(variables['Build.Reason'], 'PullRequest')
+    displayName: Update GitVersion file for PullRequests
+
+  - task: UseDotNet@2
+    displayName: 'Use .Net Core runtime 3.1.x'
+    inputs:
+      packageType: runtime
+      version: 3.1.3
+
+  - task: gitversion/setup@0
+    inputs:
+      versionSpec: '5.5.1'
+
+  - task: gitversion/execute@0
+    inputs:
+      updateAssemblyInfo: 'False'
+      useConfigFile: true
+      configFilePath: GitVersion.yml
+    displayName: Use GitVersion

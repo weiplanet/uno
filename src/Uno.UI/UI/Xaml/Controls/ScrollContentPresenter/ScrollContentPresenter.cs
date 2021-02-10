@@ -29,7 +29,7 @@ using View = Windows.UI.Xaml.UIElement;
 
 namespace Windows.UI.Xaml.Controls
 {
-	public partial class ScrollContentPresenter : IScrollContentPresenter, ILayoutConstraints
+	public partial class ScrollContentPresenter : ContentPresenter, ILayoutConstraints
 	{
 		private void InitializeScrollContentPresenter()
 		{
@@ -47,37 +47,10 @@ namespace Windows.UI.Xaml.Controls
 		}
 
 #if XAMARIN
-		private View _content;
-
-		public
-#if __MACOS__
-			new
+		private NativeScrollContentPresenter Native => Content as NativeScrollContentPresenter;
+		public ScrollBarVisibility HorizontalScrollBarVisibility => Native?.HorizontalScrollBarVisibility ?? default;
+		public ScrollBarVisibility VerticalScrollBarVisibility => Native?.VerticalScrollBarVisibility ?? default;
 #endif
-			View Content
-		{
-			get { return _content; }
-			set
-			{
-				var previousView = _content;
-				_content = value;
-
-				OnContentChanged(previousView, value);
-			}
-		}
-
-		partial void OnContentChanged(View previousView, View newView);
-#endif
-
-
-		void IScrollContentPresenter.OnMinZoomFactorChanged(float newValue)
-		{
-			MinimumZoomScale = newValue;
-		}
-
-		void IScrollContentPresenter.OnMaxZoomFactorChanged(float newValue)
-		{
-			MaximumZoomScale = newValue;
-		}
 
 		bool ILayoutConstraints.IsWidthConstrained(View requester)
 		{
@@ -86,7 +59,11 @@ namespace Windows.UI.Xaml.Controls
 				return false;
 			}
 
+#if __MACOS__
+			return false;
+#else
 			return this.IsWidthConstrainedSimple() ?? (Parent as ILayoutConstraints)?.IsWidthConstrained(this) ?? false;
+#endif
 		}
 
 		bool ILayoutConstraints.IsHeightConstrained(View requester)
@@ -96,7 +73,25 @@ namespace Windows.UI.Xaml.Controls
 				return false;
 			}
 
+#if __MACOS__
+			return false;
+#else
 			return this.IsHeightConstrainedSimple() ?? (Parent as ILayoutConstraints)?.IsHeightConstrained(this) ?? false;
+#endif
 		}
+
+		public double ExtentHeight
+		{
+			get => Content is FrameworkElement fe ? fe.DesiredSize.Height : 0;
+		}
+
+		public double ExtentWidth
+		{
+			get => Content is FrameworkElement fe ? fe.DesiredSize.Width : 0;
+		}
+
+		public double ViewportHeight => DesiredSize.Height;
+
+		public double ViewportWidth => DesiredSize.Width;
 	}
 }

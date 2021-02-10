@@ -14,7 +14,7 @@ namespace Windows.UI.Xaml.Shapes
 	{
 		protected bool HasStroke
 		{
-			get { return StrokeThickness > 0 && Stroke != null; }
+			get { return Stroke != null && ActualStrokeThickness > 0; }
 		}
 
 		internal double PhysicalStrokeThickness
@@ -26,23 +26,26 @@ namespace Windows.UI.Xaml.Shapes
 		{
 			var drawSize = default(Windows.Foundation.Size);
 
+			var suggestedWidth = canvas.Width;
+			var suggestedHeight = canvas.Height;
+
 			switch (Stretch)
 			{
 				case Stretch.Fill:
-					drawSize.Width = canvas.Width;
-					drawSize.Height = canvas.Height;
+					drawSize.Width = suggestedWidth;
+					drawSize.Height = suggestedHeight;
 					break;
 				case Stretch.None:
-					drawSize.Width = double.IsNaN(Width) || Width == 0 ? 0 : canvas.Width;
-					drawSize.Height = double.IsNaN(Height) || Height == 0 ? 0 : canvas.Height;
+					drawSize.Width = double.IsNaN(Width) || Width == 0 ? 0 : suggestedWidth;
+					drawSize.Height = double.IsNaN(Height) || Height == 0 ? 0 : suggestedHeight;
 					break;
 				case Stretch.Uniform:
-					drawSize.Width = Math.Min(canvas.Width, canvas.Height);
-					drawSize.Height = Math.Min(canvas.Width, canvas.Height);
+					drawSize.Width = Math.Min(suggestedWidth, suggestedHeight);
+					drawSize.Height = Math.Min(suggestedWidth, suggestedHeight);
 					break;
 				case Stretch.UniformToFill:
-					drawSize.Width = Math.Max(canvas.Width, canvas.Height);
-					drawSize.Height = Math.Max(canvas.Width, canvas.Height);
+					drawSize.Width = Math.Max(suggestedWidth, suggestedHeight);
+					drawSize.Height = Math.Max(suggestedWidth, suggestedHeight);
 					break;
 			}
 
@@ -99,12 +102,14 @@ namespace Windows.UI.Xaml.Shapes
 
 		protected void SetStrokeDashEffect(Paint strokePaint)
 		{
-			if (StrokeDashArray != null && StrokeDashArray.Count > 0)
+			var strokeDashArray = StrokeDashArray;
+
+			if (strokeDashArray != null && strokeDashArray.Count > 0)
 			{
 				// If only value specified in the dash array, copy and add it
-				if (StrokeDashArray.Count == 1)
+				if (strokeDashArray.Count == 1)
 				{
-					StrokeDashArray.Add(StrokeDashArray[0]);
+					strokeDashArray.Add(strokeDashArray[0]);
 				}
 
 				// Make sure the dash array has a positive number of items, Android cannot have an odd number
@@ -113,9 +118,9 @@ namespace Windows.UI.Xaml.Shapes
 				//		**  The intervals array must contain an even number of entries (>=2), with
 				//			the even indices specifying the "on" intervals, and the odd indices
 				//			specifying the "off" intervals.  **
-				if (StrokeDashArray.Count % 2 == 0)
+				if (strokeDashArray.Count % 2 == 0)
 				{
-					var pattern = StrokeDashArray.Select(d => (float)d).ToArray();
+					var pattern = strokeDashArray.Select(d => (float)d).ToArray();
 					strokePaint.SetPathEffect(new DashPathEffect(pattern, 0));
 				}
 				else

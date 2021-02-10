@@ -36,6 +36,8 @@ namespace Benchmarks.Shared.Controls
 			this.InitializeComponent();
 		}
 
+		public string ClassFilter { get; set; } = "";
+
 		private void OnRunTests(object sender, object args)
 		{
 			_ = Dispatcher.RunAsync(
@@ -52,6 +54,8 @@ namespace Benchmarks.Shared.Controls
 			{
 				var config = new CoreConfig(_logger);
 
+				BenchmarkUIHost.Root = FindName("testHost") as ContentControl;
+
 				await SetStatus("Discovering benchmarks in " + BenchmarksBaseNamespace);
 				var types = EnumerateBenchmarks(config).ToArray();
 
@@ -63,10 +67,14 @@ namespace Benchmarks.Shared.Controls
 
 				await SetStatus($"Done.");
 			}
-			catch(Exception e)
+			catch (Exception e)
 			{
 				await SetStatus($"Failed {e?.Message}");
 				_logger.WriteLine(LogKind.Error, e?.ToString());
+			}
+			finally
+			{
+				BenchmarkUIHost.Root = null;
 			}
 		}
 
@@ -81,6 +89,7 @@ namespace Benchmarks.Shared.Controls
 			   where !type.IsGenericType
 			   where type.Namespace?.StartsWith(BenchmarksBaseNamespace) ?? false
 			   where BenchmarkConverter.TypeToBenchmarks(type, config).BenchmarksCases.Length != 0
+			   where string.IsNullOrEmpty(ClassFilter) || type.Name.Contains(ClassFilter)
 			   select type;
 
 		public class CoreConfig : ManualConfig
@@ -88,7 +97,10 @@ namespace Benchmarks.Shared.Controls
 			public CoreConfig(ILogger logger)
 			{
 				Add(logger);
+
+#if __WASM__
 				Add(AsciiDocExporter.Default);
+#endif
 
 				Add(Job.InProcess
 					.WithLaunchCount(1)
@@ -97,6 +109,8 @@ namespace Benchmarks.Shared.Controls
 					.With(InProcessToolchain.Synchronous)
 					.WithId("InProcess")
 				);
+
+				ArtifactsPath = Path.GetTempPath();
 			}
 		}
 

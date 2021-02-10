@@ -19,6 +19,7 @@ using Uno.Logging;
 using Microsoft.Extensions.Logging;
 using Windows.UI.Xaml;
 using System.IO;
+using Windows.UI.Popups;
 using Uno.Disposables;
 
 #if XAMARIN || NETSTANDARD2_0
@@ -42,7 +43,11 @@ namespace SampleControl.Presentation
 
 	public partial class SampleChooserViewModel
 	{
+#if DEBUG
 		private const int _numberOfRecentSamplesVisible = 10;
+#else
+		private const int _numberOfRecentSamplesVisible = 0;
+#endif
 		private List<SampleChooserCategory> _categories;
 
 		private readonly Uno.Threading.AsyncLock _fileLock = new Uno.Threading.AsyncLock();
@@ -77,10 +82,18 @@ namespace SampleControl.Presentation
 			// Disable all pooling so that controls get collected quickly.
 			Windows.UI.Xaml.FrameworkTemplatePool.IsPoolingEnabled = false;
 #endif
+#if NETFX_CORE
+			UseFluentStyles = true;
+#endif
 			InitializeCommands();
 			ObserveChanges();
 
 			_categories = GetSamples();
+
+			if (this.Log().IsEnabled(LogLevel.Information))
+			{
+				this.Log().Info($"Found {_categories.SelectMany(c => c.SamplesContent).Distinct().Count()} sample(s) in {_categories.Count} categories.");
+			}
 		}
 
 		/// <summary>
@@ -153,11 +166,8 @@ namespace SampleControl.Presentation
 			CategoriesSelected = section == Section.Library || section == Section.Samples;
 
 			RecentsVisibility = section == Section.Recents;
-
 			FavoritesVisibility = section == Section.Favorites;
-
 			SearchVisibility = section == Section.Search;
-
 			SampleVisibility = section == Section.Samples;
 
 			_lastSection = section;
@@ -234,128 +244,149 @@ namespace SampleControl.Presentation
 			"Animations.EasingDoubleKeyFrame_CompositeTransform",
 		};
 
-		private async Task RecordAllTests(CancellationToken ct)
+		internal async Task RecordAllTests(CancellationToken ct, string screenShotPath = "", Action doneAction = null)
 		{
 			try
 			{
 				IsSplitVisible = false;
 
-				var folderName = "UITests-" + DateTime.Now.ToString("yyyyMMdd-hhmmssfff", CultureInfo.InvariantCulture);
+				var folderName = Path.Combine(screenShotPath, "UITests-" + DateTime.Now.ToString("yyyyMMdd-hhmmssfff", CultureInfo.InvariantCulture));
 
 				await DumpOutputFolderName(ct, folderName);
-
 
 				await Window.Current.Dispatcher.RunAsync(
 					CoreDispatcherPriority.Normal,
 					async () =>
-				{
-#if XAMARIN
-					var initialInactiveStats = Uno.UI.DataBinding.BinderReferenceHolder.GetInactiveViewReferencesStats();
-					var initialActiveStats = Uno.UI.DataBinding.BinderReferenceHolder.GetReferenceStats();
-#endif
-					var testQuery = from category in _categories
-									from sample in category.SamplesContent
-									where !sample.IgnoreInAutomatedTests
-										// where sample.ControlName.Equals("GridViewVerticalGrouped")
-									select new SampleInfo
-									{
-										Category = category,
-										Sample = sample,
-									};
-
-					Debug.Assert(
-						_firstTargetToRun.IsNullOrEmpty() || testQuery.Any(testInfo => testInfo.Matches(_firstTargetToRun)),
-						"First target to run must be either a Category or a Sample that is present in the app."
-					);
-
-					Debug.Assert(
-						_targetsToSkip.Where(target => !target.IsNullOrWhiteSpace()).None(target => target.Equals(_firstTargetToRun, StringComparison.OrdinalIgnoreCase)),
-						"First test to run cannot be skipped"
-					);
-
-					var tests = testQuery
-						.SkipWhile(testInfo => _firstTargetToRun.HasValue() && !testInfo.Matches(_firstTargetToRun))
-						.Where(testInfo => _targetsToSkip.None(testInfo.Matches))
-						.ToArray();
-
-					if (this.Log().IsEnabled(LogLevel.Debug))
 					{
-						this.Log().Debug($"Generating tests for {tests.Count()} test in {folderName}");
-					}
-
-					foreach (var sample in tests)
-					{
-						try
-						{
-#if XAMARIN
-							var inactiveStats = Uno.UI.DataBinding.BinderReferenceHolder.GetInactiveViewReferencesStats();
-							var activeStats = Uno.UI.DataBinding.BinderReferenceHolder.GetReferenceStats();
-#endif
-
-							var fileName = $"{sample.Category.Category}-{sample.Sample.ControlName}.png";
-
-							try
-							{
-								LogMemoryStatistics();
-
-								if (this.Log().IsEnabled(LogLevel.Debug))
-								{
-									this.Log().Debug($"Generating {folderName}\\{fileName}");
-								}
-
-								await ShowNewSection(ct, Section.SamplesContent);
-
-								SelectedLibrarySample = sample.Sample;
-
-								var content = await UpdateContent(ct, sample.Sample) as FrameworkElement;
-
-								ContentPhone = content;
-
-								await Task.Delay(500, ct);
-
-								await GenerateBitmap(ct, folderName, fileName, content);
-							}
-							catch (Exception e)
-							{
-								this.Log().Error($"Failed to execute test for {fileName}", e);
-							}
-
-#if XAMARIN
-							Uno.UI.DataBinding.BinderReferenceHolder.LogInactiveViewReferencesStatsDiff(inactiveStats);
-							Uno.UI.DataBinding.BinderReferenceHolder.LogActiveViewReferencesStatsDiff(activeStats);
-#endif
-						}
-						catch (Exception e)
-						{
-							if (this.Log().IsEnabled(LogLevel.Error))
-							{
-								this.Log().Error("Exception", e);
-							}
-						}
-					}
-
-					ContentPhone = null;
-
-					if (this.Log().IsEnabled(LogLevel.Debug))
-					{
-						this.Log().Debug($"Final binder reference stats");
-					}
-
-#if XAMARIN
-					Uno.UI.DataBinding.BinderReferenceHolder.LogInactiveViewReferencesStatsDiff(initialInactiveStats);
-					Uno.UI.DataBinding.BinderReferenceHolder.LogActiveViewReferencesStatsDiff(initialActiveStats);
-#endif
-				});
+						await RecordAllTestsInner(folderName, ct, doneAction);
+					});
 			}
 			catch (Exception e)
 			{
 				if (this.Log().IsEnabled(LogLevel.Error))
 				{
-					this.Log().Error("Exception", e);
+					this.Log().Error("RecordAllTests exception", e);
+				}
+			}
+		}
+
+		private async Task RecordAllTestsInner(string folderName, CancellationToken ct, Action doneAction = null)
+		{
+			try
+			{
+#if XAMARIN
+				var initialInactiveStats = Uno.UI.DataBinding.BinderReferenceHolder.GetInactiveViewReferencesStats();
+				var initialActiveStats = Uno.UI.DataBinding.BinderReferenceHolder.GetReferenceStats();
+#endif
+				var testQuery = from category in _categories
+								from sample in category.SamplesContent
+								where !sample.IgnoreInSnapshotTests
+								// where sample.ControlName.Equals("GridViewVerticalGrouped")
+								select new SampleInfo
+								{
+									Category = category,
+									Sample = sample,
+								};
+
+				Debug.Assert(
+					_firstTargetToRun.IsNullOrEmpty() || testQuery.Any(testInfo => testInfo.Matches(_firstTargetToRun)),
+					"First target to run must be either a Category or a Sample that is present in the app."
+				);
+
+				Debug.Assert(
+					_targetsToSkip.Where(target => !target.IsNullOrWhiteSpace()).None(target => target.Equals(_firstTargetToRun, StringComparison.OrdinalIgnoreCase)),
+					"First test to run cannot be skipped"
+				);
+
+				var tests = testQuery
+					.SkipWhile(testInfo => _firstTargetToRun.HasValue() && !testInfo.Matches(_firstTargetToRun))
+					.Where(testInfo => _targetsToSkip.None(testInfo.Matches))
+					.ToArray();
+
+				if (this.Log().IsEnabled(LogLevel.Debug))
+				{
+					this.Log().Debug($"Generating tests for {tests.Count()} test in {folderName}");
+				}
+
+				foreach (var sample in tests)
+				{
+					try
+					{
+#if XAMARIN
+						var inactiveStats = Uno.UI.DataBinding.BinderReferenceHolder.GetInactiveViewReferencesStats();
+						var activeStats = Uno.UI.DataBinding.BinderReferenceHolder.GetReferenceStats();
+#endif
+
+						var fileName = $"{sample.Category.Category}-{sample.Sample.ControlName}.png";
+
+						try
+						{
+							Console.WriteLine($"Creating control for {fileName}");
+
+							LogMemoryStatistics();
+
+							if (this.Log().IsEnabled(LogLevel.Debug))
+							{
+								this.Log().Debug($"Generating {folderName}\\{fileName}");
+							}
+
+							await ShowNewSection(ct, Section.SamplesContent);
+
+							SelectedLibrarySample = sample.Sample;
+
+							var content = await UpdateContent(ct, sample.Sample) as FrameworkElement;
+
+							ContentPhone = content;
+
+							await Task.Delay(500, ct);
+
+							Console.WriteLine($"Generating screenshot for {fileName}");
+
+							await GenerateBitmap(ct, folderName, fileName, content);
+						}
+						catch (Exception e)
+						{
+							this.Log().Error($"Failed to execute test for {fileName}", e);
+						}
+
+#if XAMARIN
+						Uno.UI.DataBinding.BinderReferenceHolder.LogInactiveViewReferencesStatsDiff(inactiveStats);
+						Uno.UI.DataBinding.BinderReferenceHolder.LogActiveViewReferencesStatsDiff(activeStats);
+#endif
+					}
+					catch (Exception e)
+					{
+						if (this.Log().IsEnabled(LogLevel.Error))
+						{
+							this.Log().Error("Exception", e);
+						}
+					}
+				}
+
+				ContentPhone = null;
+
+				if (this.Log().IsEnabled(LogLevel.Debug))
+				{
+					this.Log().Debug($"Final binder reference stats");
+				}
+
+#if XAMARIN
+				Uno.UI.DataBinding.BinderReferenceHolder.LogInactiveViewReferencesStatsDiff(initialInactiveStats);
+				Uno.UI.DataBinding.BinderReferenceHolder.LogActiveViewReferencesStatsDiff(initialActiveStats);
+#endif
+			}
+			catch (Exception e)
+			{
+				if (this.Log().IsEnabled(LogLevel.Error))
+				{
+					this.Log().Error("RecordAllTests exception", e);
 				}
 			}
 			finally
 			{
+				// Done action is needed as awaiting the task is not enough to determine the end of this method.
+				doneAction?.Invoke();
+
 				IsSplitVisible = true;
 			}
 		}
@@ -364,7 +395,8 @@ namespace SampleControl.Presentation
 
 		private void ObserveChanges()
 		{
-			PropertyChanged += (s, e) => {
+			PropertyChanged += (s, e) =>
+			{
 
 				void Update(SampleChooserContent newContent)
 				{
@@ -435,7 +467,8 @@ namespace SampleControl.Presentation
 			var search = SearchTerm;
 
 			var unused = Window.Current.Dispatcher.RunAsync(
-				CoreDispatcherPriority.Normal, async () => {
+				CoreDispatcherPriority.Normal, async () =>
+				{
 					await Task.Delay(500);
 
 					if (!currentSearch.IsCancellationRequested)
@@ -530,49 +563,35 @@ namespace SampleControl.Presentation
 		/// <returns></returns>
 		private List<SampleChooserCategory> GetSamples()
 		{
-			var query = from assembly in GetAllAssembies()
-						from type in FindDefinedAssemblies(assembly)
-						let sampleAttribute = FindSampleAttribute(type)
-						where sampleAttribute != null
-						select (type, attribute: sampleAttribute);
+			var categories =
+#if !__WASM__
+				from assembly in GetAllAssembies().AsParallel()
+#else
+				from assembly in GetAllAssembies()
+#endif
+				from type in FindDefinedAssemblies(assembly)
+				let sampleAttribute = FindSampleAttribute(type)
+				where sampleAttribute != null
+				let content = GetContent(type, sampleAttribute)
+				from category in content.Categories
+				group content by category into contentByCategory
+				orderby contentByCategory.Key.ToLower(CultureInfo.CurrentUICulture)
+				select new SampleChooserCategory(contentByCategory);
 
-			query = query.ToArray();
+			return categories.ToList();
 
-			var categories = new List<SampleChooserCategory>();
-
-			foreach (var control in query)
-			{
-				var sampleControl = new SampleChooserContent()
+			SampleChooserContent GetContent(TypeInfo type, SampleAttribute attribute)
+				=> new SampleChooserContent
 				{
-					ControlName = control.attribute.ControlName,
-					ViewModelType = control.attribute.ViewModelType,
-					Description = control.attribute.Description,
-					ControlType = control.type.AsType(),
-					IgnoreInAutomatedTests = control.attribute.IgnoreInAutomatedTests
+					ControlName = attribute.Name ?? type.Name,
+					Categories = attribute.Categories?.Where(c => !string.IsNullOrWhiteSpace(c)).Any() ?? false
+						? attribute.Categories.Where(c => !string.IsNullOrWhiteSpace(c)).ToArray()
+						: new[] { type.Namespace.Split('.').Last().TrimStart("Windows_UI_Xaml").TrimStart("Windows_UI") },
+					ViewModelType = attribute.ViewModelType,
+					Description = attribute.Description,
+					ControlType = type.AsType(),
+					IgnoreInSnapshotTests = attribute.IgnoreInSnapshotTests
 				};
-
-				if (categories.TrueForAll(s => s.Category != control.attribute.Category))
-				{
-					categories.Add(new SampleChooserCategory() { Category = control.attribute.Category, SamplesContent = new List<SampleChooserContent>() { sampleControl } });
-				}
-				else
-				{
-					categories.Where(t => t.Category == control.attribute.Category).First().SamplesContent.Add(sampleControl);
-				}
-			}
-
-			this.Log().Info($"Found {query.Count()} sample(s) in {categories.Count} categorie(s).");
-
-			//Order categories
-			categories.Sort((x, y) => string.Compare(x.Category, y.Category));
-			//Order sample tests in categories
-			foreach (var category in categories)
-			{
-				category.SamplesContent.Sort((x, y) => string.Compare(x.ControlName, y.ControlName));
-			}
-
-			return categories
-			.ToList();
 		}
 
 		private static IEnumerable<TypeInfo> FindDefinedAssemblies(Assembly assembly)
@@ -587,13 +606,17 @@ namespace SampleControl.Presentation
 			}
 		}
 
-		private static SampleControlInfoAttribute FindSampleAttribute(TypeInfo type)
+		private static SampleAttribute FindSampleAttribute(TypeInfo type)
 		{
 			try
 			{
-				return type?.GetCustomAttributes()
-					.OfType<SampleControlInfoAttribute>()
-					.FirstOrDefault();
+				if (!(type.Namespace?.StartsWith("System.Windows") ?? true))
+				{
+					return type?.GetCustomAttributes()
+						.OfType<SampleAttribute>()
+						.FirstOrDefault();
+				}
+				return null;
 			}
 			catch (Exception)
 			{
@@ -603,7 +626,7 @@ namespace SampleControl.Presentation
 
 		private void OnSelectedCategoryChanged()
 		{
-			if(SelectedCategory != null)
+			if (SelectedCategory != null)
 			{
 				SampleContents = SelectedCategory
 					.SamplesContent
@@ -677,6 +700,21 @@ namespace SampleControl.Presentation
 			}
 		}
 
+		private async Task ShowTestInformation(CancellationToken ct)
+		{
+			var sample = CurrentSelectedSample;
+			if (sample != null)
+			{
+				var text = $@"
+view: {sample.ControlType.FullName}
+categories: {sample.Categories?.JoinBy(", ")}
+description:
+" + sample.Description;
+
+				await new MessageDialog(text.Trim(), sample.ControlName).ShowAsync();
+			}
+		}
+
 		private async Task UpdateFavoriteForSample(CancellationToken ct, SampleChooserContent sample, bool isFavorite)
 		{
 			// Have to update favorite on UI thread for the INotifyPropertyChanged in SampleChooserControl
@@ -731,17 +769,18 @@ namespace SampleControl.Presentation
 				};
 			}
 
-			var container = new Border {Child = control as UIElement};
+			var container = new Border { Child = control as UIElement };
 
 			if (newContent.ViewModelType != null)
 			{
 				var vm = Activator.CreateInstance(newContent.ViewModelType, container.Dispatcher);
 				container.DataContext = vm;
 
-				if(vm is IDisposable disposable)
+				if (vm is IDisposable disposable)
 				{
 					void Dispose(object snd, RoutedEventArgs e)
 					{
+						container.DataContext = null;
 						container.Unloaded -= Dispose;
 						disposable.Dispose();
 					}
@@ -781,6 +820,9 @@ namespace SampleControl.Presentation
 				RecentSamples = recents;
 			}
 
+			GC.Collect(2);
+			GC.WaitForPendingFinalizers();
+
 			return container;
 		}
 
@@ -804,10 +846,10 @@ namespace SampleControl.Presentation
 		{
 			var q = from category in _categories
 					from test in category.SamplesContent
-					where !test.IgnoreInAutomatedTests
+					where !test.IgnoreInSnapshotTests
 					select test.ControlType.FullName;
 
-			return string.Join(";", q);
+			return string.Join(";", q.Distinct());
 		}
 
 		public async Task SetSelectedSample(CancellationToken ct, string metadataName)
@@ -903,13 +945,17 @@ namespace SampleControl.Presentation
 
 			if (json.HasValueTrimmed())
 			{
-				return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(json);
+				try
+				{
+					return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(json);
+				}
+				catch (Exception ex)
+				{
+					this.Log().Error($"Could not deserialize Sample chooser file {key}.", ex);
+				}
 			}
-			else
 #endif
-			{
-				return defaultValue != null ? defaultValue() : default(T);
-			}
+			return defaultValue != null ? defaultValue() : default(T);
 		}
 	}
 }

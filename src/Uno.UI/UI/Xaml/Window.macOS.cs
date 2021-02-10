@@ -11,6 +11,7 @@ using Uno.UI.Controls;
 using System.Drawing;
 using Windows.UI.ViewManagement;
 using Uno.UI;
+using Windows.UI.Xaml.Controls;
 
 namespace Windows.UI.Xaml
 {
@@ -21,6 +22,10 @@ namespace Windows.UI.Xaml
 		private static Window _current;
 		private RootViewController _mainController;
 		private UIElement _content;
+		private Grid _main;
+		private Border _rootBorder;
+		private Border _fullWindow;
+		private object _windowResizeNotificationObject;
 
 		/// <summary>
 		/// A function to generate a custom view controller which inherits from <see cref="RootViewController"/>.
@@ -37,8 +42,6 @@ namespace Windows.UI.Xaml
 
 			_mainController = ViewControllerGenerator?.Invoke() ?? new RootViewController();
 
-			_window.TitleVisibility = NSWindowTitleVisibility.Hidden;
-
 			ObserveOrientationAndSize();
 
 			Dispatcher = CoreDispatcher.Main;
@@ -49,15 +52,16 @@ namespace Windows.UI.Xaml
 
 		private void ObserveOrientationAndSize()
 		{
-			//_window.FrameChanged +=
-			//	() => RaiseNativeSizeChanged(ViewHelper.GetScreenSize());
+			_windowResizeNotificationObject = NSNotificationCenter.DefaultCenter.AddObserver(
+				new NSString("NSWindowDidResizeNotification"), ResizeObserver, null);
 
-			// TODO macOS
-			//var statusBar = StatusBar.GetForCurrentView();
-			//statusBar.Showing += (o, e) => UpdateCoreBounds();
-			//statusBar.Hiding += (o, e) => UpdateCoreBounds();
+			RaiseNativeSizeChanged(new CGSize(_window.Frame.Width, _window.Frame.Height));
 
-			RaiseNativeSizeChanged(ViewHelper.GetScreenSize());
+		}
+
+		private void ResizeObserver(NSNotification obj)
+		{
+			RaiseNativeSizeChanged(new CGSize(_window.Frame.Width, _window.Frame.Height));
 		}
 
 		partial void InternalActivate()
@@ -69,16 +73,38 @@ namespace Windows.UI.Xaml
 
 		private void InternalSetContent(UIElement value)
 		{
-			_content?.RemoveFromSuperview();
+			if (_main == null)
+			{
+				_rootBorder = new Border();
+				_fullWindow = new Border()
+				{
+					VerticalAlignment = VerticalAlignment.Stretch,
+					HorizontalAlignment = HorizontalAlignment.Stretch,
+					Visibility = Visibility.Collapsed
+				};
 
-			_content = value;
-			_mainController.View = value;
-			_window.BackgroundColor = Colors.White;
-			value.Frame = _window.Frame;
-			value.AutoresizingMask = NSViewResizingMask.WidthSizable | NSViewResizingMask.HeightSizable;
+				_main = new Grid()
+				{
+					IsVisualTreeRoot = true,
+					Children =
+					{
+						_rootBorder,
+						_fullWindow
+					}
+				};
+
+				_mainController.View = _main;
+				_main.Frame = _window.Frame;
+				_main.AutoresizingMask = NSViewResizingMask.WidthSizable | NSViewResizingMask.HeightSizable;
+			}
+
+			_rootBorder.Child?.RemoveFromSuperview();
+			_rootBorder.Child = _content = value;
 		}
 
 		private UIElement InternalGetContent() => _content;
+
+		private UIElement InternalGetRootElement() => _main;
 
 		private static Window InternalGetCurrentWindow()
 		{
@@ -105,10 +131,26 @@ namespace Windows.UI.Xaml
 				}
 
 				RaiseSizeChanged(
-					new WindowSizeChangedEventArgs(
+					new Windows.UI.Core.WindowSizeChangedEventArgs(
 						new Windows.Foundation.Size((float)size.Width, (float)size.Height)
 					)
 				);
+			}
+		}
+
+		internal void DisplayFullscreen(UIElement element)
+		{
+			if (element == null)
+			{
+				_fullWindow.Child = null;
+				_rootBorder.Visibility = Visibility.Visible;
+				_fullWindow.Visibility = Visibility.Collapsed;
+			}
+			else
+			{
+				_fullWindow.Visibility = Visibility.Visible;
+				_rootBorder.Visibility = Visibility.Collapsed;
+				_fullWindow.Child = element;
 			}
 		}
 

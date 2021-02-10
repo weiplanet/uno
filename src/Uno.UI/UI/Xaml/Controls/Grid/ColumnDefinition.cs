@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
 namespace Windows.UI.Xaml.Controls
 {
+	[DebuggerDisplay("{DebugDisplay,nq}")]
 	public partial class ColumnDefinition : DependencyObject
 	{
 		public ColumnDefinition()
@@ -21,12 +23,12 @@ namespace Windows.UI.Xaml.Controls
 			set { this.SetValue(WidthProperty, value); }
 		}
 
-		public static readonly DependencyProperty WidthProperty =
+		public static DependencyProperty WidthProperty { get ; } =
 			DependencyProperty.Register(
 				"Width",
 				typeof(GridLength),
 				typeof(ColumnDefinition),
-				new PropertyMetadata(
+				new FrameworkPropertyMetadata(
 					GridLengthHelper.OneStar,
 					(s, e) => ((ColumnDefinition)s)?.OnWidthChanged(e)
 				)
@@ -76,5 +78,7 @@ namespace Windows.UI.Xaml.Controls
 				return result;
 			}
 		}
+
+		private string DebugDisplay => $"ColumnDefinition(Width={Width.ToDisplayString()};MinWidth={MinWidth};MaxWidth={MaxWidth};ActualWidth={ActualWidth}";
 	}
 }

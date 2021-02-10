@@ -19,7 +19,8 @@ namespace Uno.UI.Samples.Content.UITests.ButtonTestsControl
 		{
 			this.InitializeComponent();
 
-			DataContext = _viewModel = new ButtonsViewModel();
+			Loading += (s, e) => DataContext = _viewModel = new ButtonsViewModel();
+			Unloaded += (s, e) => DataContext = _viewModel = null;
 		}
 
 		private void OnClick(object sender, RoutedEventArgs e) => _viewModel.Log($"{sender}.Click");
@@ -73,8 +74,8 @@ namespace Uno.UI.Samples.Content.UITests.ButtonTestsControl
 			}
 		}
 
-		public ICommand Command { get; private set; }
-		public ICommand ClearCommand { get; private set; }
+		public System.Windows.Input.ICommand Command { get; private set; }
+		public System.Windows.Input.ICommand ClearCommand { get; private set; }
 		public ObservableCollection<string> Output { get; } = new ObservableCollection<string>();
 
 		private void OnCommand(object sender) => Log($"{sender}.Command");
@@ -85,7 +86,7 @@ namespace Uno.UI.Samples.Content.UITests.ButtonTestsControl
 		private void NotifyPropertyChanged([CallerMemberName] string property = "*") => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
 	}
 
-	public class ActionCommand : ICommand
+	public class ActionCommand : System.Windows.Input.ICommand
 	{
 		private Action<object> _action;
 

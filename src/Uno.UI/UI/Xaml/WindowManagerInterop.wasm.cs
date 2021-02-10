@@ -53,25 +53,21 @@ namespace Uno.UI.Xaml
 		#endregion
 
 		#region CreateContent
-		internal static void CreateContent(IntPtr htmlId, string htmlTag, IntPtr handle, string fullName, bool htmlTagIsSvg, bool isFrameworkElement, bool isFocusable, string[] classes)
+		internal static void CreateContent(IntPtr htmlId, string htmlTag, IntPtr handle, int uiElementRegistrationId, bool htmlTagIsSvg, bool isFocusable)
 		{
 			if (UseJavascriptEval)
 			{
 				var isSvgStr = htmlTagIsSvg ? "true" : "false";
-				var isFrameworkElementStr = isFrameworkElement ? "true" : "false";
 				var isFocusableStr = isFocusable ? "true" : "false"; // by default all control are not focusable, it has to be change latter by the control itself
-				var classesParam = classes.Select(c => $"\"{c}\"").JoinBy(",");
 
 				WebAssemblyRuntime.InvokeJS(
 					"Uno.UI.WindowManager.current.createContent({" +
 					"id:\"" + htmlId + "\"," +
 					"tagName:\"" + htmlTag + "\", " +
 					"handle:" + handle + ", " +
-					"type:\"" + fullName + "\", " +
+					"uiElementRegistrationId: " + uiElementRegistrationId + ", " +
 					"isSvg:" + isSvgStr + ", " +
-					"isFrameworkElement:" + isFrameworkElementStr + ", " +
-					"isFocusable:" + isFocusableStr + ", " +
-					"classes:[" + classesParam + "]" +
+					"isFocusable:" + isFocusableStr +
 					"});");
 			}
 			else
@@ -81,12 +77,9 @@ namespace Uno.UI.Xaml
 					HtmlId = htmlId,
 					TagName = htmlTag,
 					Handle = handle,
-					Type = fullName,
+					UIElementRegistrationId = uiElementRegistrationId,
 					IsSvg = htmlTagIsSvg,
-					IsFrameworkElement = isFrameworkElement,
-					IsFocusable = isFocusable,
-					Classes_Length = classes.Length,
-					Classes = classes,
+					IsFocusable = isFocusable
 				};
 
 				TSInteropMarshaller.InvokeJS<WindowManagerCreateContentParams, bool>("Uno:createContentNative", parms);
@@ -104,12 +97,54 @@ namespace Uno.UI.Xaml
 
 			public IntPtr Handle;
 
-			[MarshalAs(TSInteropMarshaller.LPUTF8Str)]
-			public string Type;
+			public int UIElementRegistrationId;
 
 			public bool IsSvg;
-			public bool IsFrameworkElement;
 			public bool IsFocusable;
+		}
+
+		#endregion
+
+		#region CreateContent
+		internal static int RegisterUIElement(string typeName, string[] classNames, bool isFrameworkElement)
+		{
+			if (UseJavascriptEval)
+			{
+				var isFrameworkElementStr = isFrameworkElement ? "true" : "false";
+				var classesParam = classNames.Select(c => $"\"{c}\"").JoinBy(",");
+
+				var ret = WebAssemblyRuntime.InvokeJS(
+					"Uno.UI.WindowManager.current.registerUIElement({" +
+					"typeName:\"" + typeName + "\"," +
+					"isFrameworkElement:" + isFrameworkElementStr + ", " +
+					"classes:[" + classesParam + "]" +
+					"});");
+
+				return int.Parse(ret);
+			}
+			else
+			{
+				var parms = new WindowManagerRegisterUIElementParams
+				{
+					TypeName = typeName,
+					IsFrameworkElement = isFrameworkElement,
+					Classes_Length = classNames.Length,
+					Classes = classNames,
+				};
+
+				var ret = TSInteropMarshaller.InvokeJS<WindowManagerRegisterUIElementParams, WindowManagerRegisterUIElementReturn>("Uno:registerUIElementNative", parms);
+				return ret.RegistrationId;
+			}
+		}
+
+		[TSInteropMessage]
+		[StructLayout(LayoutKind.Sequential, Pack = 4)]
+		private struct WindowManagerRegisterUIElementParams
+		{
+			[MarshalAs(TSInteropMarshaller.LPUTF8Str)]
+			public string TypeName;
+
+			public bool IsFrameworkElement;
 
 			public int Classes_Length;
 
@@ -117,6 +152,12 @@ namespace Uno.UI.Xaml
 			public string[] Classes;
 		}
 
+		[TSInteropMessage]
+		[StructLayout(LayoutKind.Sequential, Pack = 4)]
+		private struct WindowManagerRegisterUIElementReturn
+		{
+			public int RegistrationId;
+		}
 		#endregion
 
 		#region SetElementTransform
@@ -129,9 +170,10 @@ namespace Uno.UI.Xaml
 
 				SetStyles(
 					htmlId,
-					new[] { ("transform", native.ToStringInvariant()) },
-					true
+					new[] { ("transform", native.ToStringInvariant()) }
 				);
+
+				SetArrangeProperties(htmlId);
 			}
 			else
 			{
@@ -154,14 +196,48 @@ namespace Uno.UI.Xaml
 		[StructLayout(LayoutKind.Sequential, Pack = 8)]
 		private struct WindowManagerSetElementTransformParams
 		{
+			public IntPtr HtmlId;
+
 			public double M11;
 			public double M12;
 			public double M21;
 			public double M22;
 			public double M31;
 			public double M32;
+		}
 
+		#endregion
+
+		#region SetPointerEvents
+
+		internal static void SetPointerEvents(IntPtr htmlId, bool enabled)
+		{
+			if (UseJavascriptEval)
+			{
+				var enabledString = enabled ? "true" : "false";
+
+				var command = "Uno.UI.WindowManager.current.setPointerEvents(" + htmlId + ", " + enabledString + ");";
+				WebAssemblyRuntime.InvokeJS(command);
+			}
+			else
+			{
+				var parms = new WindowManagerSetPointerEventsParams
+				{
+					HtmlId = htmlId,
+					Enabled = enabled
+				};
+
+				TSInteropMarshaller.InvokeJS<WindowManagerSetPointerEventsParams, bool>("Uno:setPointerEventsNative", parms);
+			}
+		}
+
+		[TSInteropMessage]
+		[StructLayout(LayoutKind.Sequential, Pack = 4)]
+		private struct WindowManagerSetPointerEventsParams
+		{
 			public IntPtr HtmlId;
+
+			public bool Enabled;
 		}
 
 		#endregion
@@ -252,15 +328,59 @@ namespace Uno.UI.Xaml
 
 		#endregion
 
-		#region SetStyles
+		#region SetRectanglePosition
 
-		internal static void SetStyles(IntPtr htmlId, (string name, string value)[] styles, bool setAsArranged = false)
+		internal static void SetSvgElementRect(IntPtr htmlId, Rect rect)
 		{
 			if (UseJavascriptEval)
 			{
-				var setAsArrangeString = setAsArranged ? "true" : "false";
+				SetAttributes(
+					htmlId,
+					new[]{
+						("x", rect.X.ToStringInvariant()),
+						("y", rect.Y.ToStringInvariant()),
+						("width", rect.Width.ToStringInvariant()),
+						("height", rect.Height.ToStringInvariant())
+					}
+				);
+			}
+			else
+			{
+				var parms = new WindowManagerSetSvgElementRectParams
+				{
+					HtmlId = htmlId,
+					X = rect.X,
+					Y = rect.Y,
+					Width = rect.Width,
+					Height = rect.Height,
+				};
+
+				TSInteropMarshaller.InvokeJS<WindowManagerSetSvgElementRectParams>("Uno:setSvgElementRect", parms);
+			}
+		}
+
+		[TSInteropMessage]
+		[StructLayout(LayoutKind.Sequential, Pack = 8)]
+		private struct WindowManagerSetSvgElementRectParams
+		{
+			public double X;
+			public double Y;
+			public double Width;
+			public double Height;
+
+			public IntPtr HtmlId;
+		}
+
+		#endregion
+
+		#region SetStyles
+
+		internal static void SetStyles(IntPtr htmlId, (string name, string value)[] styles)
+		{
+			if (UseJavascriptEval)
+			{
 				var stylesStr = string.Join(", ", styles.Select(s => "\"" + s.name + "\": \"" + WebAssemblyRuntime.EscapeJs(s.value) + "\""));
-				var command = "Uno.UI.WindowManager.current.setStyle(\"" + htmlId + "\", {" + stylesStr + "}," + setAsArrangeString + "); ";
+				var command = "Uno.UI.WindowManager.current.setStyle(\"" + htmlId + "\", {" + stylesStr + "}); ";
 
 				WebAssemblyRuntime.InvokeJS(command);
 			}
@@ -277,7 +397,6 @@ namespace Uno.UI.Xaml
 				var parms = new WindowManagerSetStylesParams
 				{
 					HtmlId = htmlId,
-					SetAsArranged = setAsArranged,
 					Pairs_Length = pairs.Length,
 					Pairs = pairs,
 				};
@@ -292,14 +411,99 @@ namespace Uno.UI.Xaml
 		{
 			public IntPtr HtmlId;
 
-			public bool SetAsArranged;
-
 			public int Pairs_Length;
 
 			[MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.LPStr)]
 			public string[] Pairs;
 		}
 
+		#endregion
+
+		#region IsCssFeatureSupported
+
+		internal static bool IsCssFeatureSupported(string propertyName, string value)
+		{
+			var command = $"Uno.UI.WindowManager.current.isCssPropertySupported(\"{propertyName}\", \"{WebAssemblyRuntime.EscapeJs(value)}\")";
+			var result = WebAssemblyRuntime.InvokeJS(command);
+			return bool.Parse(result);
+		}
+
+		internal static bool IsCssFeatureSupported(string supportCondition)
+		{
+			var command = $"Uno.UI.WindowManager.current.isCssConditionSupported(\"{WebAssemblyRuntime.EscapeJs(supportCondition)}\")";
+			var result = WebAssemblyRuntime.InvokeJS(command);
+			return bool.Parse(result);
+		}
+
+		#endregion
+
+		private static void SetArrangeProperties(IntPtr htmlId)
+		{
+			if (!UseJavascriptEval)
+			{
+				throw new InvalidOperationException("This should only be called when UseJavascriptEval flag is set");
+			}
+
+			var command = "Uno.UI.WindowManager.current.setArrangeProperties(\"" + htmlId + "\"); ";
+
+			WebAssemblyRuntime.InvokeJS(command);
+		}
+
+		#region SetUnsetCssClasses
+		internal static void SetUnsetCssClasses(IntPtr htmlId, string[] cssClassesToSet, string[] cssClassesToUnset)
+		{
+			if (UseJavascriptEval)
+			{
+				var setClasses =
+					cssClassesToSet == null
+						? "null"
+						: "[" +
+						  string.Join(", ", cssClassesToSet
+							  .Select(WebAssemblyRuntime.EscapeJs)
+							  .Select(s => "\"" + s + "\""))
+						  + "]";
+				var unsetClasses =
+					cssClassesToUnset == null
+						? "null"
+						: "[" +
+						  string.Join(", ", cssClassesToUnset
+							  .Select(WebAssemblyRuntime.EscapeJs)
+							  .Select(s => "\"" + s + "\""))
+						  + "]";
+				var command = "Uno.UI.WindowManager.current.setUnsetClasses(" + htmlId + ", " + setClasses + ", " + unsetClasses + ");";
+				WebAssemblyRuntime.InvokeJS(command);
+			}
+			else
+			{
+				var parms = new WindowManagerSetUnsetClassesParams
+				{
+					HtmlId = htmlId,
+					CssClassesToSet = cssClassesToSet,
+					CssClassesToSet_Length = cssClassesToSet?.Length ?? 0,
+					CssClassesToUnset = cssClassesToUnset,
+					CssClassesToUnset_Length = cssClassesToUnset?.Length ?? 0
+				};
+
+				TSInteropMarshaller.InvokeJS<WindowManagerSetUnsetClassesParams>("Uno:setUnsetClassesNative", parms);
+			}
+		}
+
+		[TSInteropMessage]
+		[StructLayout(LayoutKind.Sequential, Pack = 4)]
+		private struct WindowManagerSetUnsetClassesParams
+		{
+			public IntPtr HtmlId;
+
+			public int CssClassesToSet_Length;
+
+			[MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.LPStr)]
+			public string[] CssClassesToSet;
+
+			public int CssClassesToUnset_Length;
+
+			[MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.LPStr)]
+			public string[] CssClassesToUnset;
+		}
 		#endregion
 
 		#region SetClasses
@@ -316,7 +520,10 @@ namespace Uno.UI.Xaml
 			{
 				var parms = new WindowManagerSetClassesParams
 				{
-					HtmlId = htmlId, CssClasses = cssClasses, CssClasses_Length = cssClasses.Length, Index = index
+					HtmlId = htmlId,
+					CssClasses = cssClasses,
+					CssClasses_Length = cssClasses.Length,
+					Index = index
 				};
 
 				TSInteropMarshaller.InvokeJS<WindowManagerSetClassesParams>("Uno:setClassesNative", parms);
@@ -426,8 +633,8 @@ namespace Uno.UI.Xaml
 		}
 
 		#endregion
-		#region SetAttributes
 
+		#region SetAttribute
 		internal static void SetAttribute(IntPtr htmlId, string name, string value)
 		{
 			if (UseJavascriptEval)
@@ -462,6 +669,47 @@ namespace Uno.UI.Xaml
 
 			[MarshalAs(TSInteropMarshaller.LPUTF8Str)]
 			public string Value;
+		}
+
+		#endregion
+
+		#region GetAttribute
+		internal static string GetAttribute(IntPtr htmlId, string name)
+		{
+			var command = "Uno.UI.WindowManager.current.getAttribute(\"" + htmlId + "\", \"" + name + "\");";
+
+			return WebAssemblyRuntime.InvokeJS(command);
+		}
+		#endregion
+
+		#region ClearAttribute
+		internal static void RemoveAttribute(IntPtr htmlId, string name)
+		{
+			if (UseJavascriptEval)
+			{
+				var command = "Uno.UI.WindowManager.current.removeAttribute(\"" + htmlId + "\", \"" + name + "\");";
+				WebAssemblyRuntime.InvokeJS(command);
+			}
+			else
+			{
+				var parms = new WindowManagerRemoveAttributeParams()
+				{
+					HtmlId = htmlId,
+					Name = name,
+				};
+
+				TSInteropMarshaller.InvokeJS<WindowManagerRemoveAttributeParams>("Uno:removeAttributeNative", parms);
+			}
+		}
+
+		[TSInteropMessage]
+		[StructLayout(LayoutKind.Sequential, Pack = 4)]
+		private struct WindowManagerRemoveAttributeParams
+		{
+			public IntPtr HtmlId;
+
+			[MarshalAs(TSInteropMarshaller.LPUTF8Str)]
+			public string Name;
 		}
 
 		#endregion
@@ -637,6 +885,12 @@ namespace Uno.UI.Xaml
 		#region ResetStyle
 		internal static void ResetStyle(IntPtr htmlId, string[] names)
 		{
+			if (names == null || names.Length == 0)
+			{
+				// nothing to do
+				return;
+			}
+
 			if (UseJavascriptEval)
 			{
 				if (names.Length == 1)
@@ -679,12 +933,12 @@ namespace Uno.UI.Xaml
 		#endregion
 
 		#region RegisterEventOnView
-		internal static void RegisterEventOnView(IntPtr htmlId, string eventName, bool onCapturePhase, string eventFilterName, string eventExtractorName)
+		internal static void RegisterEventOnView(IntPtr htmlId, string eventName, bool onCapturePhase, int eventExtractorId)
 		{
 			if (UseJavascriptEval)
 			{
 				var onCapturePhaseStr = onCapturePhase ? "true" : "false";
-				var cmd = $"Uno.UI.WindowManager.current.registerEventOnView(\"{htmlId}\", \"{eventName}\", {onCapturePhaseStr}, \"{eventFilterName}\", \"{eventExtractorName}\");";
+				var cmd = $"Uno.UI.WindowManager.current.registerEventOnView(\"{htmlId}\", \"{eventName}\", {onCapturePhaseStr}, {eventExtractorId});";
 
 				WebAssemblyRuntime.InvokeJS(cmd);
 			}
@@ -695,8 +949,7 @@ namespace Uno.UI.Xaml
 					HtmlId = htmlId,
 					EventName = eventName,
 					OnCapturePhase = onCapturePhase,
-					EventFilterName = eventFilterName,
-					EventExtractorName = eventExtractorName,
+					EventExtractorId = eventExtractorId,
 				};
 
 				TSInteropMarshaller.InvokeJS<WindowManagerRegisterEventOnViewParams>("Uno:registerEventOnViewNative", parms);
@@ -714,11 +967,26 @@ namespace Uno.UI.Xaml
 
 			public bool OnCapturePhase;
 
-			[MarshalAs(TSInteropMarshaller.LPUTF8Str)]
-			public string EventFilterName;
+			public int EventExtractorId;
+		}
+		#endregion
 
-			[MarshalAs(TSInteropMarshaller.LPUTF8Str)]
-			public string EventExtractorName;
+		#region registerPointerEventsOnView
+		internal static void RegisterPointerEventsOnView(IntPtr htmlId)
+		{
+			var parms = new WindowManagerRegisterPointerEventsOnViewParams()
+			{
+				HtmlId = htmlId,
+			};
+
+			TSInteropMarshaller.InvokeJS<WindowManagerRegisterPointerEventsOnViewParams>("Uno:registerPointerEventsOnView", parms);
+		}
+
+		[TSInteropMessage]
+		[StructLayout(LayoutKind.Sequential, Pack = 4)]
+		private struct WindowManagerRegisterPointerEventsOnViewParams
+		{
+			public IntPtr HtmlId;
 		}
 		#endregion
 
@@ -827,8 +1095,9 @@ namespace Uno.UI.Xaml
 						("height", rect.Height.ToString(CultureInfo.InvariantCulture) + "px"),
 						("clip", clipRect2)
 					}
-					, true
 				);
+
+				SetArrangeProperties(htmlId);
 			}
 			else
 			{
@@ -838,10 +1107,10 @@ namespace Uno.UI.Xaml
 					Top = rect.Top,
 					Left = rect.Left,
 					Width = rect.Width,
-					Height = rect.Height
+					Height = rect.Height,
 				};
 
-				if(clipRect != null)
+				if (clipRect != null)
 				{
 					parms.Clip = true;
 					parms.ClipTop = clipRect.Value.Top;
@@ -900,7 +1169,7 @@ namespace Uno.UI.Xaml
 
 				return (
 					clientSize: new Size(ret.ClientWidth, ret.ClientHeight),
-					offsetSize:new Size(ret.OffsetWidth, ret.OffsetHeight)
+					offsetSize: new Size(ret.OffsetWidth, ret.OffsetHeight)
 				);
 			}
 		}
@@ -925,5 +1194,61 @@ namespace Uno.UI.Xaml
 
 		#endregion
 
+		#region ScrollTo
+		internal static void ScrollTo(IntPtr htmlId, double? left, double? top, bool disableAnimation)
+		{
+			var parms = new WindowManagerScrollToOptionsParams
+			{
+				HtmlId = htmlId,
+				HasLeft = left.HasValue,
+				Left = left ?? 0,
+				HasTop = top.HasValue,
+				Top = top ?? 0,
+				DisableAnimation = disableAnimation
+			};
+
+			TSInteropMarshaller.InvokeJS<WindowManagerScrollToOptionsParams>("Uno:scrollTo", parms);
+		}
+
+		[TSInteropMessage]
+		[StructLayout(LayoutKind.Sequential, Pack = 4)]
+		private struct WindowManagerScrollToOptionsParams
+		{
+			public double Left;
+			public double Top;
+			public bool HasLeft;
+			public bool HasTop;
+			public bool DisableAnimation;
+
+			public IntPtr HtmlId;
+		}
+		#endregion
+
+		#region Pointers
+		[Flags]
+		internal enum HtmlPointerButtonsState
+		{
+			// https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events#Determining_button_states
+
+			None = 0,
+			Left = 1,
+			Middle = 4,
+			Right = 2,
+			X1 = 8,
+			X2 = 16,
+			Eraser = 32,
+		}
+
+		internal enum HtmlPointerButtonUpdate
+		{
+			None = -1,
+			Left = 0,
+			Middle = 1,
+			Right = 2,
+			X1 = 3,
+			X2 = 4,
+			Eraser = 5
+		}
+		#endregion
 	}
 }

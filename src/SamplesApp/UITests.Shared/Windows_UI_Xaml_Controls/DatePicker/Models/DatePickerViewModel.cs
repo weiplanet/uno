@@ -4,27 +4,30 @@ using Uno.UI.Samples.UITests.Helpers;
 using Windows.UI.Core;
 using Windows.UI.Xaml.Data;
 
+using ICommand = System.Windows.Input.ICommand;
+using EventHandler = System.EventHandler;
+
 namespace UITests.Shared.Windows_UI_Xaml_Controls.DatePicker.Models
 {
 	[Bindable]
 	public class DatePickerViewModel : ViewModelBase
 	{
-		private DateTime _date = DateTime.Now.Date;
+		private DateTimeOffset _date = DateTimeOffset.FromUnixTimeSeconds(1580655600); // 02/02/2020 @ 3:00pm (UTC) - Groundhog day!
 
 		public DatePickerViewModel(CoreDispatcher dispatcher) : base(dispatcher)
 		{
 		}
 
-		public DateTime Date
+		public DateTimeOffset Date
 		{
 			get => _date;
 			set
 			{
 				_date = value;
-				RaisePropertyChanged("Date");
+				RaisePropertyChanged();
 			}
 		}
 
-		public ICommand SetToCurrentDate => GetOrCreateCommand(() => Date = DateTime.Now.Date);
+		public ICommand SetToCurrentDate => GetOrCreateCommand(() => Date = DateTimeOffset.Now);
 	}
 }

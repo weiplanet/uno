@@ -1,8 +1,8 @@
-# Developing with Uno.UI
+﻿# Developing with Uno.UI
 
 ## Pre-requisites
 
-* Visual Studio 2017 15.5 or later, with :
+* [**Visual Studio 2019 16.3 or later**](https://visualstudio.microsoft.com/), with :
 	* Xamarin component, with the iOS Remote Simulator installed
 	* A working Mac with Visual Studio for Mac, XCode 8.2 or later installed
 	* The google Android x86 emulators
@@ -11,7 +11,7 @@ Visual Studio for Mac is supported, but the editing capabilities are currently l
 
 ## Create a new project
 
-Follow the instructions in the [Getting Started guide](get-started.md) to use the Uno app template to create a new app in Visual Studio. See the [Uno.Quickstart](https://github.com/nventive/Uno.QuickStart) repository for a simple example of a 'Hello World' application.
+Follow the instructions in the [Getting Started guide](get-started.md) to use the Uno app template to create a new app in Visual Studio. See the [Uno.Quickstart](https://github.com/unoplatform/uno.QuickStart) repository for a simple example of a 'Hello World' application.
 
 ## General guidelines for developing with Uno.UI
 
@@ -26,7 +26,7 @@ abstracting the implementation using a common interface.
 * A platform-specific code file **should have an appropriate suffix** (.android.cs, .ios.cs, .uwp.cs, .xamarin.cs, ...)
 * Uno.UI is not a perfect implementation of UWP's XAML, which means that there will be compatibility issues. When you 
 encounter one, a few approaches can be taken:
- 1. **Always [report the issue](https://github.com/nventive/Uno/issues) to the Uno.UI maintainers**. This may be a known issue, for which there may be known 
+ 1. **Always [report the issue](https://github.com/unoplatform/uno/issues) to the Uno.UI maintainers**. This may be a known issue, for which there may be known 
     workarounds or guidance on how to handle the issue.
  1. **Try to find a UWP-compatible workaround**, possibly non-breaking, meaning that the added Xaml produces the
     same behavior for all platforms, even if it does not conform to the expected UWP behavior.
@@ -73,7 +73,7 @@ located in the **MyApp.[iOS|Android]\Obj\[Platform]** folder.
 You may see those files in Visual Studio by selecting this project in the Solution Explorer, then click
 the **Show all Files** icon at the top.
 
-If you notice an issue, or an error in the commented code of the generated file, you may need to alter your Xaml.
+If you notice an issue, or an error in the commented code of the generated file, you may need to alter your Xaml file.
 
 ## Configure the manifest for the WebAssembly head
 In your WASM head, create a folder named `WasmScripts`, with a file containing the Javascript code below
@@ -92,9 +92,9 @@ var UnoAppManifest = {
 ```
 
 The properties are :
-* **splashScreenImage**: defines the image that will be centered on the window during the application's loading time
-* **splashScreenColor**: defines the background color of the splash screen
-* **displayName**: defines the default name of the application in the browser's window title
+* **splashScreenImage**: defines the image that will be centered on the window during the application's loading time.
+* **splashScreenColor**: defines the background color of the splash screen.
+* **displayName**: defines the default name of the application in the browser's window title.
 
 ## Supporting multiple platforms in Xaml files
 
@@ -104,17 +104,15 @@ See [here for a detailed guide to authoring platform-specific XAML code](platfor
 
 The layout behavior is the notion of applying margins, paddings and alignments for a control inside its parent. In UWP/WPF, the code responsible for this behavior is located in the FrameworkElement class. This means that any control can alter its own rendering position inside its parent, and place its content accordingly, regardless of the parent type.
 
-The Uno.UI layout engine on Android and iOS is applied by a parent to its children. This means that if a control has an alignment or a margin set, if it is not child of a FrameworkElement (ie it's the child of a non-Uno view), those properties will be ignored, and the control will stretch within its parent's available space.
+The Uno.UI layout engine on Android and iOS is applied by a parent to its children. This means that if a control has an alignment or a margin set, if it is not child of a FrameworkElement (i.e. it's the child of a non-Uno view), those properties will be ignored, and the control will stretch within its parent's available space.
 
-This behavior is is a direct consequence of the ability to mix native and Uno.UI controls.
+This behavior is a direct consequence of the ability to mix native and Uno.UI controls.
 
 ## Dependency Properties
 
-Uno.UI allows the sharing of [Dependency Property](https://msdn.microsoft.com/en-us/library/ms752914%28v=vs.110%29.aspx) declaration and 
-code between Windows and Xamarin based platforms.
+Uno.UI allows the sharing of [Dependency Property](https://docs.microsoft.com/en-us/windows/uwp/xaml-platform/dependency-properties-overview) declaration and code between Windows and Xamarin based platforms.
 
-Declaring a dependency property in Uno UI requires a class to implement the  
-interface `DependencyObject`, to gain access to the GetValue and SetValue methods.
+Declaring a dependency property in Uno UI requires a class to implement the interface `DependencyObject`, to gain access to the GetValue and SetValue methods.
 
 Here is an example of such a declaration:
 
@@ -144,6 +142,11 @@ For the following control class:
 ```csharp
     public class MyUserControl : Control  
     {  
+        public MyUserControl()
+        {
+            InitializeComponent();
+        }
+        
         public string MyCustomContent  
         {  
             get { return (string)GetValue(MyCustomContentProperty); }  
@@ -203,10 +206,14 @@ Uno.UI also generates a nested class named StaticResources in all non-ResourceDi
 Uno.UI supports the [authoring of styles](https://msdn.microsoft.com/en-us/library/windows/apps/windows.ui.xaml.style.aspx).
 
 For many controls in Uno, two prepackaged styles are provided:
-* NativeDefault[Control] which is customized to match the UI guidelines of the target platform
-* XamlDefault[Control] which is the default style of controls on Windows
+* NativeDefault[Control] which is customized to match the UI guidelines of the target platform.
+* XamlDefault[Control] which is the default style of controls on Windows.
 
-On WASM, the NativeDefault[Control] styles are currently only aliases to the XamlDefault[Control], for compatibility with other platforms.
+An application can set native styles as the default for supported controls by setting the static flag `Uno.UI.FeatureConfiguration.Style.UseUWPDefaultStyles = false;` somewhere in app code (eg, the `App.xaml.cs` constructor). It's also possible to configure only certain controls to default to the native style, in the following manner: `Uno.UI.FeatureConfiguration.Style.UseUWPDefaultStylesOverride[typeof(Frame)] = false;`
+
+Third-party libraries can define native variants of default styles for custom controls, using the `xamarin:IsNativeStyle="True"` tag in Xaml. These will be used if the consuming application is configured to use native styles.
+
+On WASM, the NativeDefault[Control] styles are currently only aliases to the XamlDefault[Control], for code compatibility with other platforms.
 
 ## Localization
 
@@ -233,13 +240,13 @@ See the [Border control](https://msdn.microsoft.com/en-us/library/windows/apps/w
 
 ### Button
 
-The Button control is implemented by default using a ControlTemplate that contains a bindable native button, that binds that the Content property as a string, and propagates the CanExecute of a databound command.
+The Button control is implemented by default using a ControlTemplate that contains a bindable native button that binds that the Content property as a string, and propagates the CanExecute of a databound command.
 
 For more information, see the [Button class](https://msdn.microsoft.com/en-us/library/windows/apps/windows.ui.xaml.controls.button.aspx).
 
 ### CheckBox
 
-The CheckBox control is implemented by default using a ControlTemplate that contains a bindable native CheckBox, that binds the Content property as a string, IsChecked as a boolean, and propagates the CanExecute of a databound command.
+The CheckBox control is implemented by default using a ControlTemplate that contains a bindable native CheckBox that binds the Content property as a string, IsChecked as a boolean, and propagates the CanExecute of a databound command.
 
 For more information, see the [CheckBox class](https://msdn.microsoft.com/en-us/library/windows/apps/windows.ui.xaml.controls.checkbox.aspx).
 
@@ -249,13 +256,13 @@ For more information, see the [HyperLinkButton](https://msdn.microsoft.com/en-us
 
 ### RadioButton
 
-The RadioButton control is implemented by default using a ControlTemplate that contains a bindable native CheckBox, that binds the Content property as a string, IsChecked as a boolean, and propagates the CanExecute of a databound command.
+The RadioButton control is implemented by default using a ControlTemplate that contains a bindable native CheckBox that binds the Content property as a string, IsChecked as a boolean, and propagates the CanExecute of a databound command.
 
-For more information, see the [RadioButton clas](https://msdn.microsoft.com/en-us/library/windows/apps/windows.ui.xaml.controls.radiobutton.aspx).
+For more information, see the [RadioButton class](https://msdn.microsoft.com/en-us/library/windows/apps/windows.ui.xaml.controls.radiobutton.aspx).
 
 ### ComboBox
 
-The ComboBox control is implemented by default using a ControlTemplate that contains a bindable native CheckBox, that binds that the Content property as a string, IsChecked as a boolean, and propagates the CanExecute of a databound command.
+The ComboBox control is implemented by default using a ControlTemplate that contains a bindable native CheckBox that binds that the Content property as a string, IsChecked as a boolean, and propagates the CanExecute of a databound command.
 
 For more information, see the [ComboBox class](https://msdn.microsoft.com/en-us/library/windows/apps/windows.ui.xaml.controls.combobox.aspx).
 
@@ -277,7 +284,7 @@ For more information, see [GridView class](https://docs.microsoft.com/en-us/uwp/
 
 ### Image
 
-For more information, see [Image class](https://msdn.microsoft.com/en-us/library/windows/apps/windows.ui.xaml.controls.image.aspx).
+For more information, see [Image class](https://msdn.microsoft.com/en-us/library/window/apps/windows.ui.xaml.controls.image.aspx).
 
 
 ### ImageSource
@@ -287,8 +294,7 @@ Image handling works 'out of the box' on iOS and WebAssembly without further con
 On Android, to handle the loading of images from a remote url, the Image control has to be provided a 
 ImageSource.DefaultImageLoader such as the [Android Universal Image Loader](https://github.com/nostra13/Android-Universal-Image-Loader).
 
-This package is installed by default when using the [Uno Cross-Platform solution templates](https://marketplace.visualstudio.com/items?itemName=nventivecorp.uno-platform-addin). If not using the solution template, you can install the [nventive.UniversalImageLoader](https://www.nuget.org/packages/nventive.UniversalImageLoader/) NuGet package and call the following code
-from your application's App constructor:
+This package is installed by default when using the [Uno Cross-Platform solution templates](https://marketplace.visualstudio.com/items?itemName=nventivecorp.uno-platform-addin). If not using the solution template, you can install the [nventive.UniversalImageLoader](https://www.nuget.org/packages/nventive.UniversalImageLoader/) NuGet package and call the following code from your application's App constructor:
 
 ```csharp
 private void ConfigureUniversalImageLoader()
@@ -346,99 +352,7 @@ For more information, see the [TextBlock](https://msdn.microsoft.com/en-us/libra
 
 ### Custom Fonts
 
-#### Custom Fonts on Android
-Fonts must be placed in the `Assets` folder of the head project, matching the path of the fonts in Windows, and marked as `AndroidAsset`.
-The format is the same as Windows, as follows:
-
-```xml
-<Setter Property="FontFamily" Value="/Assets/Fonts/Roboto-Regular.ttf#Roboto" />
-```
-   or
-   
-```xml
-<Setter Property="FontFamily" Value="ms-appx:///Assets/Fonts/Roboto-Regular.ttf#Roboto" />
-```
-
-#### Custom Fonts on iOS
-Fonts must be placed in the `Resources` folder of the head project, be marked as
-`BundleResource` for the build type.
-
-Each custom font **must** then be specified in the `info.plist` file as follows:
-
-```xml
-<key>UIAppFonts</key>
-<array>
-    <string>yourfont01.ttf</string>
-    <string>yourfonr02.ttf</string>
-    <string>yourfonr03.ttf</string>
-</array>
-```
-
-The format is the same as Windows, as follows:
-
-```xml
-<Setter Property="FontFamily" Value="/Assets/Fonts/yourfont01.ttf#Roboto" />
-```
-    or
-
-```xml
-<Setter Property="FontFamily" Value="ms-appx:///Assets/Fonts/yourfont01.ttf#Roboto" />
-```
-
-#### Custom fonts on WebAssembly
-Adding a custom font is done through the use of WebFonts, using a data-URI:
-
-```css
-@font-face {
-  font-family: "Symbols";
-  /* winjs-symbols.woff2: https://github.com/Microsoft/fonts/tree/master/Symbols */
-  src: url(data:application/x-font-woff;charset=utf-8;base64,d09GMgABAAA...) format('woff');
-}
-```
-
-This type of declaration is required to avoid measuring errors if the font requested
-by a `TextBlock` or a `FontIcon` needs to be downloaded first. Specifying it using a
-data-URI ensures the font is readily available.
-
-#### Custom Fonts Notes
-Please note that some custom fonts need the FontFamily and FontWeight properties to be set at the same time in order to work properly on TextBlocks, Runs and for styles Setters.
-If that's your case, here are some examples of code:
-
-```xml
-<FontFamily x:Key="FontFamilyLight">ms-appx:///Assets/Fonts/PierSans-Light.otf#Pier Sans Light</FontFamily>
-<FontFamily x:Key="FontFamilyBold">ms-appx:///Assets/Fonts/PierSans-Bold.otf#Pier Sans Bold</FontFamily>
-
-<Style x:Key="LightTextBlockStyle"
-	   TargetType="TextBlock">
-	<Setter Property="FontFamily"
-			Value="{StaticResource FontFamilyLight}" />
-	<Setter Property="FontWeight"
-			Value="Light" />
-	<Setter Property="FontSize"
-			Value="16" />
-</Style>
-
-<Style x:Key="BoldTextBlockStyle"
-	   TargetType="TextBlock">
-	<Setter Property="FontFamily"
-			Value="{StaticResource FontFamilyBold}" />
-	<Setter Property="FontWeight"
-			Value="Bold" />
-	<Setter Property="FontSize"
-			Value="24" />
-</Style>
-
-<TextBlock Text="TextBlock with Light FontFamily and FontWeight."
-		   FontFamily="{StaticResource FontFamilyLight}"
-		   FontWeight="Light" />
-
-<TextBlock Style="{StaticResource BoldTextBlockStyle}">
-	<Run Text="TextBlock with Runs" />
-	<Run Text="and  Light FontFamily and FontWeight for the second Run."
-		 FontWeight="Light"
-		 FontFamily="{StaticResource FontFamilyLight}" />
-</TextBlock>
-```
+For more information, see the [Custom fonts documentation](features/custom-fonts.md).
 
 ### TextBox
 
@@ -477,4 +391,8 @@ As of iOS 9, the system does not allow iPad applications to dictate their orient
 If a view needs to keep the keyboard opened when tapping on it, use the `Uno.UI.Controls.Window.SetNeedsKeyboard` attached property.
 
 ## Creating/Using Android Activities
-At the root of every Android Uno app lies a `BaseActivity` class that extends from `Android.Support.V7.App.AppCompatActivity` which is part of the [Android v7 AppCompat Support Library](https://developer.android.com/topic/libraries/support-library/features.html#v7-appcompat). If you ever need to create a new Activity within your app or within Uno you must be sure to extend `BaseActivity` and, if you need to apply a Theme to the activity, ensure that the Theme you set is a `Theme.AppCompat` theme (or descendant).
+At the root of every Android Uno app, lies a `BaseActivity` class that extends from `Android.Support.V7.App.AppCompatActivity` which is part of the [Android v7 AppCompat Support Library](https://developer.android.com/topic/libraries/support-library/features.html#v7-appcompat). If you ever need to create a new Activity within your app or within Uno you must be sure to extend `BaseActivity` and, if you need to apply a Theme to the activity, ensure that the Theme you set is a `Theme.AppCompat` theme (or descendant).
+
+### Using the ILLinker for WebAssembly
+
+For more information about using the IL Linker for WebAssembly, read this [article](features/using-il-linker-webassembly.md).

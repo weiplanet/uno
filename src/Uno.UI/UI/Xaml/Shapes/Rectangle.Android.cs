@@ -13,14 +13,13 @@ namespace Windows.UI.Xaml.Shapes
 			SetWillNotDraw(false);
 		}
 
-		public override void Draw(Android.Graphics.Canvas canvas)
+		protected override void OnDraw(Canvas canvas)
 		{
-			base.Draw(canvas);
-
+			base.OnDraw(canvas);
 			var drawArea = GetDrawArea(canvas);
 			var rx = ViewHelper.LogicalToPhysicalPixels(RadiusX);
 			var ry = ViewHelper.LogicalToPhysicalPixels(RadiusY);
-			
+
 			var fillRect = new Android.Graphics.Path();
 			fillRect.AddRoundRect(drawArea.ToRectF(), rx, ry, Android.Graphics.Path.Direction.Cw);
 
@@ -34,6 +33,11 @@ namespace Windows.UI.Xaml.Shapes
 		}
 
 		partial void OnRadiusYChangedPartial()
+		{
+			Invalidate();
+		}
+
+		protected override void RefreshShape(bool forceRefresh = false)
 		{
 			Invalidate();
 		}

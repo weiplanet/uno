@@ -2,58 +2,28 @@
 
 For legacy, platform support or performance reasons, Uno has some notable API differences.
 
-### DependencyObject is an interface.
+## DependencyObject is an interface.
 `DependencyObject` is an interface to allow for XAML controls to inherit directly from their native counterpart. The implementation of the methods is done through the `DependencyObjectGenerator` source generator, automatically.
 
-This has some implications in generic constraints which require to a class, but can be worked around using the `IS_UNO` define.
+This has some implications in generic constraints which require a class, but can be worked around using the `IS_UNO` define.
 
-### Panel.Children is exposing native views as items
-This a legacy requirement which will be updated in the future. This is currently required by iOS/Android `Image` control, as well as iOS implementation of `TextBlock`.
+## ListView implementations
 
-Historically, this has been a requirement for performance reasons related to view nesting in Android 4.4 and earlier, cause by a very short UI Thread stack size.
+The implementations of the ListView for iOS and Android use the native controls for performance reasons, see the [ListViewBase implementation documentation](controls/ListViewBase.md#internal-implementation).
 
-For the time being, enumerating panel children can be done as follows, in a cross platform compatible way:
+## Themes
 
-```csharp
-foreach(var item in myPanel.Children)
-{
-    if(item is FrameworkElement fe)
-    {
-        // Process the item
-    }
-}
-```
-
-This difference is particularly visible for custom panel implementations.
-
-### ListView implementations
-
-The implementations of the ListView for iOS and Android use the native controls for performance reasons, see the [ListViewBase implementation documentation][ListViewBase.md].
-
-## Styles & XAML Resources
-
-The Xaml styles uno are currently supporting two levels: global and local a Xaml file. This means that any *named* style in a file containing only a `ResourceDictionary` is accessible everywhere without including that resource dictionary.
-
-Overriding implicit styles is currently not supported.
-
-### Theme Resources & Theme Dictionaries
-
-_Theme resources_ are also considered as `StaticResource`. In the current Uno's implementation, there's
-no difference between a `{StaticResource xxx}` and a `{ThemeResource xxx}`: they will both resolve to
-the resource `xxx`.
-
-`FrameworkElement.RequestedTheme` is not supported yet. The `Application.Current.RequestedTheme` property
-must be set at launch time. Documentation: [`Application.RequestedTheme`](https://docs.microsoft.com/en-us/uwp/api/windows.ui.xaml.application.requestedtheme)
+`FrameworkElement.RequestedTheme` is supported in a very limited form. It can only be set on the application-defined content root, ie `Windows.UI.Xaml.Window.Current.Content`, which will affect the entire visual tree.
 
 ### Custom Themes
 
 On Windows, there are some _themes_ that can target, but there is no way to trigger them. The most
 known is the `HighContrast` theme.
 
-You can do something similar - an even create totally custom themes - by using the following helper:
+You can do something similar - and even create totally custom themes - by using the following helper:
 
 ``` csharp
-  // Set current theme to Hich contrast
+  // Set current theme to High contrast
   Uno.UI.RequestedCustomTheme = "HighContrast";
 ```
 

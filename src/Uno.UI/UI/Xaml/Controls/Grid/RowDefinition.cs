@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
 namespace Windows.UI.Xaml.Controls
 {
+	[DebuggerDisplay("{DebugDisplay,nq}")]
 	public partial class RowDefinition : DependencyObject
 	{
 		public RowDefinition()
@@ -21,12 +23,12 @@ namespace Windows.UI.Xaml.Controls
 			set { this.SetValue(HeightProperty, value); }
 		}
 
-		public static readonly DependencyProperty HeightProperty =
+		public static DependencyProperty HeightProperty { get ; } =
 			DependencyProperty.Register(
 				"Height",
 				typeof(GridLength),
 				typeof(RowDefinition),
-				new PropertyMetadata(
+				new FrameworkPropertyMetadata(
 					GridLengthHelper.OneStar,
 					(s, e) => ((RowDefinition)s)?.OnHeightChanged(e)
 				)
@@ -76,5 +78,7 @@ namespace Windows.UI.Xaml.Controls
 				return result;
 			}
 		}
+
+		private string DebugDisplay => $"RowDefinition(Height={Height.ToDisplayString()};MinHeight={MinHeight};MaxHeight={MaxHeight};ActualHeight={ActualHeight}";
 	}
 }

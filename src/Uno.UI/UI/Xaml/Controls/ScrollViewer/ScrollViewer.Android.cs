@@ -1,4 +1,5 @@
-﻿using Android.Views;
+﻿#nullable enable
+using Android.Views;
 using Android.Widget;
 using Uno.Extensions;
 using Uno.Logging;
@@ -13,17 +14,12 @@ using System.Text;
 using System.Drawing;
 using Uno.UI;
 using Microsoft.Extensions.Logging;
-using static Uno.UI.MathEx;
+using static Uno.Extensions.MathEx;
 
 namespace Windows.UI.Xaml.Controls
 {
-	public partial class ScrollViewer : ContentControl
+	public partial class ScrollViewer : ContentControl, ICustomClippingElement
 	{
-		partial void InitializePartial()
-		{
-			base.EnableAndroidClipping();
-		}
-
 		internal static int GetMeasureValue(int value, ScrollBarVisibility scrollBarVisibility)
 		{
 			switch (scrollBarVisibility)
@@ -54,11 +50,11 @@ namespace Windows.UI.Xaml.Controls
 
 			if (disableAnimation)
 			{
-				_sv.ScrollTo(physicalHorizontalOffset, physicalVerticalOffset);
+				_presenter?.ScrollTo(physicalHorizontalOffset, physicalVerticalOffset);
 			}
 			else
 			{
-				_sv.SmoothScrollTo(physicalHorizontalOffset, physicalVerticalOffset);
+				_presenter?.SmoothScrollTo(physicalHorizontalOffset, physicalVerticalOffset);
 			}
 		}
 
@@ -68,9 +64,9 @@ namespace Windows.UI.Xaml.Controls
 			{
 				this.Log().Warn("ChangeView: Animated zoom not yet implemented for Android.");
 			}
-			if (_sv != null)
+			if (_presenter != null)
 			{
-				_sv.ZoomScale = zoomFactor;
+				_presenter.ZoomScale = zoomFactor;
 			}
 		}
 		
@@ -81,7 +77,7 @@ namespace Windows.UI.Xaml.Controls
 				float pivotX, pivotY;
 
 				var scaledWidth = ZoomFactor * view.Width;
-				var viewPortWidth = (this as View).Width;
+				var viewPortWidth = (this as View)?.Width ?? 0f;
 
 				if (viewPortWidth <= scaledWidth)
 				{
@@ -107,7 +103,7 @@ namespace Windows.UI.Xaml.Controls
 				}
 
 				var scaledHeight = ZoomFactor * view.Height;
-				var viewportHeight = (this as View).Height;
+				var viewportHeight = (this as View)?.Height ?? 0f;
 
 				if (viewportHeight < scaledHeight)
 				{
@@ -139,22 +135,25 @@ namespace Windows.UI.Xaml.Controls
 
 		partial void OnZoomModeChangedPartial(ZoomMode zoomMode)
 		{
-			if (_sv != null)
+			if (_presenter != null)
 			{
-				_sv.IsZoomEnabled = zoomMode == ZoomMode.Enabled;
+				_presenter.IsZoomEnabled = zoomMode == ZoomMode.Enabled;
 
-				// Apply these in case _sv was not initialized when they were set
-				_sv.MinimumZoomScale = MinZoomFactor;
-				_sv.MaximumZoomScale = MaxZoomFactor;
+				// Apply these in case _presenter was not initialized when they were set
+				_presenter.MinimumZoomScale = MinZoomFactor;
+				_presenter.MaximumZoomScale = MaxZoomFactor;
 			}
 		}
 
 		partial void OnBringIntoViewOnFocusChangeChangedPartial(bool newValue)
 		{
-			if (_sv != null)
+			if (_presenter != null)
 			{
-				_sv.BringIntoViewOnFocusChange = newValue;
+				_presenter.BringIntoViewOnFocusChange = newValue;
 			}
 		}
+
+		bool ICustomClippingElement.AllowClippingToLayoutSlot => true;
+		bool ICustomClippingElement.ForceClippingToLayoutSlot => true; // force scrollviewer to always clip
 	}
 }
