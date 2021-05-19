@@ -1,4 +1,4 @@
-# Getting Started on VS Code
+# Get Started on VS Code
 
 This guide will walk you through the set-up process for building WebAssembly apps with Uno under Windows, Linux, or macOS.
 
@@ -62,7 +62,7 @@ This will create a solution that only contains the WebAssembly platform support.
 
 1. In `MainPage.xaml`, replace the Grid's content with the following:
 
-    ```xaml
+    ```xml
     <StackPanel>
         <TextBlock x:Name="txt"
                     Text="Hello, world!"

@@ -90,8 +90,8 @@ namespace Windows.UI.Xaml
 		/// Gets the implicit style for the current object
 		/// </summary>
 		[global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Never)]
-		internal static Style StoreGetImplicitStyle(this IDependencyObjectStoreProvider provider)
-			=> provider.Store.GetImplicitStyle();
+		internal static Style StoreGetImplicitStyle(this IDependencyObjectStoreProvider provider, in SpecializedResourceDictionary.ResourceKey styleKey)
+			=> provider.Store.GetImplicitStyle(styleKey);
 
 		internal static IEnumerable<object> GetParents(this object dependencyObject)
 		{
@@ -101,6 +101,22 @@ namespace Windows.UI.Xaml
 				yield return parent;
 				parent = parent.GetParent();
 			}
+		}
+
+		internal static bool HasParent(this object dependencyObject, DependencyObject searchedParent)
+		{
+			var parent = dependencyObject.GetParent();
+			while (parent != null)
+			{
+				if(ReferenceEquals(parent, searchedParent))
+				{
+					return true;
+				}
+
+				parent = parent.GetParent();
+			}
+
+			return false;
 		}
 
 		/// <summary>
@@ -407,6 +423,11 @@ namespace Windows.UI.Xaml
 		{
 			var uielement = d as UIElement ?? d.GetParents().OfType<UIElement>().FirstOrDefault();
 			uielement?.InvalidateRender();
+		}
+
+		internal static void RegisterDefaultValueProvider(this DependencyObject dependencyObject, DependencyObjectStore.DefaultValueProvider provider)
+		{
+			GetStore(dependencyObject).RegisterDefaultValueProvider(provider);
 		}
 	}
 }

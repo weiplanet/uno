@@ -101,6 +101,18 @@ namespace Windows.UI.Xaml
 
 		private bool _registeringInheritedProperties;
 		private bool _unregisteringInheritedProperties;
+		/// <summary>
+		/// An ancestor store is unregistering inherited properties.
+		/// </summary>
+		private bool _parentUnregisteringInheritedProperties;
+		/// <summary>
+		/// Is a theme-bound value currently being set?
+		/// </summary>
+		private bool _isSettingThemeBinding;
+		/// <summary>
+		/// The theme last to apply theme bindings on this object and its children.
+		/// </summary>
+		private SpecializedResourceDictionary.ResourceKey? _themeLastUsed;
 
 		private static readonly bool _validatePropertyOwner = Debugger.IsAttached;
 
@@ -407,23 +419,23 @@ namespace Windows.UI.Xaml
 			SetValue(property, DependencyProperty.UnsetValue, precedence);
 		}
 
-		internal void SetValue(DependencyProperty property, object? value, DependencyPropertyValuePrecedences precedence, DependencyPropertyDetails? propertyDetails = null)
+		internal void SetValue(DependencyProperty property, object? value, DependencyPropertyValuePrecedences precedence, DependencyPropertyDetails? propertyDetails = null, bool isThemeBinding = false)
 		{
 			if (_trace.IsEnabled)
 			{
 				using (WritePropertyEventTrace(TraceProvider.SetValueStart, TraceProvider.SetValueStop, property, precedence))
 				{
-					InnerSetValue(property, value, precedence, propertyDetails);
+					InnerSetValue(property, value, precedence, propertyDetails, isThemeBinding);
 				}
 			}
 			else
 			{
-				InnerSetValue(property, value, precedence, propertyDetails);
+				InnerSetValue(property, value, precedence, propertyDetails, isThemeBinding);
 			}
 
 		}
 
-		private void InnerSetValue(DependencyProperty property, object? value, DependencyPropertyValuePrecedences precedence, DependencyPropertyDetails? propertyDetails)
+		private void InnerSetValue(DependencyProperty property, object? value, DependencyPropertyValuePrecedences precedence, DependencyPropertyDetails? propertyDetails, bool isThemeBinding)
 		{
 			if (precedence == DependencyPropertyValuePrecedences.Coercion)
 			{
@@ -436,7 +448,7 @@ namespace Windows.UI.Xaml
 			{
 				var overrideDisposable = ApplyPrecedenceOverride(ref precedence);
 
-#if !HAS_EXPENSIVE_TRYFINALLY // Try/finally incurs a very large performance hit in mono-wasm - https://github.com/mono/mono/issues/13653
+#if !HAS_EXPENSIVE_TRYFINALLY // Try/finally incurs a very large performance hit in mono-wasm - https://github.com/dotnet/runtime/issues/50783
 				try
 #endif
 				{
@@ -455,6 +467,12 @@ namespace Windows.UI.Xaml
 
 					// Set even if they are different to make sure the value is now set on the right precedence
 					SetValueInternal(value, precedence, propertyDetails);
+
+					if (!isThemeBinding && !_isSettingThemeBinding)
+					{
+						// If a non-theme value is being set, clear any theme binding so it's not overwritten if the theme changes.
+						_resourceBindings?.ClearBinding(property, precedence);
+					}
 
 					ApplyCoercion(actualInstanceAlias, propertyDetails, previousValue, value);
 
@@ -481,7 +499,7 @@ namespace Windows.UI.Xaml
 
 					RaiseCallbacks(actualInstanceAlias, propertyDetails, previousValue, previousPrecedence, newValue, newPrecedence);
 				}
-#if !HAS_EXPENSIVE_TRYFINALLY // Try/finally incurs a very large performance hit in mono-wasm - https://github.com/mono/mono/issues/13653
+#if !HAS_EXPENSIVE_TRYFINALLY // Try/finally incurs a very large performance hit in mono-wasm - https://github.com/dotnet/runtime/issues/50783
 				finally
 #endif
 				{
@@ -596,12 +614,12 @@ namespace Windows.UI.Xaml
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private IDisposable? ApplyPrecedenceOverride(ref DependencyPropertyValuePrecedences precedence)
 		{
-			var currentlyOverridenPrecedence =
+			var currentlyOverriddenPrecedence =
 				_overriddenPrecedences?.Count > 0
 					? _overriddenPrecedences.Peek()
 					: default;
 
-			if (currentlyOverridenPrecedence is {} current)
+			if (currentlyOverriddenPrecedence is { } current)
 			{
 				precedence = current;
 
@@ -905,7 +923,7 @@ namespace Windows.UI.Xaml
 				{
 #if !HAS_EXPENSIVE_TRYFINALLY
 					// The try/finally incurs a very large performance hit in mono-wasm, and SetValue is in a very hot execution path.
-					// See https://github.com/mono/mono/issues/13653 for more details.
+					// See https://github.com/dotnet/runtime/issues/50783 for more details.
 					try
 #endif
 					{
@@ -968,7 +986,7 @@ namespace Windows.UI.Xaml
 		{
 #if !HAS_EXPENSIVE_TRYFINALLY
 			// The try/finally incurs a very large performance hit in mono-wasm, and SetValue is in a very hot execution path.
-			// See https://github.com/mono/mono/issues/13653 for more details.
+			// See https://github.com/dotnet/runtime/issues/50783 for more details.
 			try
 #endif
 			{
@@ -1063,7 +1081,7 @@ namespace Windows.UI.Xaml
 						if (dict.TryGetValue(binding.ResourceKey, out var value, shouldCheckSystem: false))
 						{
 							wasSet = true;
-							SetValue(property, BindingPropertyHelper.Convert(() => property.Type, value), binding.Precedence);
+							SetResourceBindingValue(property, binding, value);
 							break;
 						}
 					}
@@ -1072,7 +1090,7 @@ namespace Windows.UI.Xaml
 					{
 						if (ResourceResolver.TryTopLevelRetrieval(binding.ResourceKey, binding.ParseContext, out var value))
 						{
-							SetValue(property, BindingPropertyHelper.Convert(() => property.Type, value), binding.Precedence);
+							SetResourceBindingValue(property, binding, value);
 						}
 					}
 				}
@@ -1086,6 +1104,31 @@ namespace Windows.UI.Xaml
 			}
 
 			UpdateChildResourceBindings(isThemeChangedUpdate);
+		}
+
+		private void SetResourceBindingValue(DependencyProperty property, ResourceBinding binding, object? value)
+		{
+			var convertedValue = BindingPropertyHelper.Convert(() => property.Type, value);
+			if (binding.SetterBindingPath != null)
+			{
+#if !HAS_EXPENSIVE_TRYFINALLY // Try/finally incurs a very large performance hit in mono-wasm - https://github.com/dotnet/runtime/issues/50783
+				try
+#endif
+				{
+					_isSettingThemeBinding = binding.IsThemeResourceExtension;
+					binding.SetterBindingPath.Value = convertedValue;
+				}
+#if !HAS_EXPENSIVE_TRYFINALLY // Try/finally incurs a very large performance hit in mono-wasm - https://github.com/dotnet/runtime/issues/50783
+				finally
+#endif
+				{
+					_isSettingThemeBinding = false;
+				}
+			}
+			else
+			{
+				SetValue(property, convertedValue, binding.Precedence, isThemeBinding: binding.IsThemeResourceExtension);
+			}
 		}
 
 		private bool _isUpdatingChildResourceBindings;
@@ -1211,11 +1254,11 @@ namespace Windows.UI.Xaml
 		/// <summary>
 		/// Retrieve the implicit Style for <see cref="ActualInstance"/> by walking the visual tree.
 		/// </summary>
-		internal Style? GetImplicitStyle()
+		internal Style? GetImplicitStyle(in SpecializedResourceDictionary.ResourceKey styleKey)
 		{
 			foreach (var dict in GetResourceDictionaries(includeAppResources: true))
 			{
-				if (dict.TryGetValue(_originalObjectType, out var style, shouldCheckSystem: false))
+				if (dict.TryGetValue(styleKey, out var style, shouldCheckSystem: false))
 				{
 					return style as Style;
 				}
@@ -1547,8 +1590,7 @@ namespace Windows.UI.Xaml
 				{
 					for (var storeIndex = 0; storeIndex < _childrenStores.Count; storeIndex++)
 					{
-						var store = _childrenStores[storeIndex];
-						store.OnParentPropertyChangedCallback(instanceRef, property, eventArgs);
+						CallChildCallback(_childrenStores[storeIndex], instanceRef, property, eventArgs);
 					}
 				}
 			}
@@ -1583,6 +1625,30 @@ namespace Windows.UI.Xaml
 			{
 				var callback = _genericCallbacks.Data[callbackIndex];
 				callback.Invoke(instanceRef, property, eventArgs);
+			}
+		}
+
+		private void CallChildCallback(DependencyObjectStore childStore, ManagedWeakReference instanceRef, DependencyProperty property, DependencyPropertyChangedEventArgs eventArgs)
+		{
+			var propagateUnregistering = (_unregisteringInheritedProperties || _parentUnregisteringInheritedProperties) && property == _dataContextProperty;
+#if !HAS_EXPENSIVE_TRYFINALLY // Try/finally incurs a very large performance hit in mono-wasm - https://github.com/dotnet/runtime/issues/50783
+			try
+#endif
+			{
+				if (propagateUnregistering)
+				{
+					childStore._parentUnregisteringInheritedProperties = true;
+				}
+				childStore.OnParentPropertyChangedCallback(instanceRef, property, eventArgs);
+			}
+#if !HAS_EXPENSIVE_TRYFINALLY // Try/finally incurs a very large performance hit in mono-wasm - https://github.com/dotnet/runtime/issues/50783
+			finally
+#endif
+			{
+				if (propagateUnregistering)
+				{
+					childStore._parentUnregisteringInheritedProperties = false;
+				}
 			}
 		}
 
@@ -1670,7 +1736,38 @@ namespace Windows.UI.Xaml
 					}
 				}
 			}
+
+			CheckThemeBindings(previousParent, value);
 		}
+
+		/// <summary>
+		/// If we're being unloaded, save the current theme. If we're being loaded, check if application theme has changed since theme
+		/// bindings were last applied, and update if needed.
+		/// </summary>
+		private void CheckThemeBindings(object? previousParent, object? value)
+		{
+			if (ActualInstance is FrameworkElement frameworkElement)
+			{
+				if (value == null && previousParent != null)
+				{
+					_themeLastUsed = Application.Current?.RequestedThemeForResources;
+				}
+				else if (previousParent == null && value != null && _themeLastUsed is { } previousTheme)
+				{
+					_themeLastUsed = null;
+					if (Application.Current?.RequestedThemeForResources is { } currentTheme && !previousTheme.Equals(currentTheme))
+					{
+						Application.PropagateThemeChanged(frameworkElement);
+					}
+				}
+			}
+		}
+
+		/// <summary>
+		/// Set theme used when applying theme-bound values.
+		/// </summary>
+		/// <param name="resourceKey">Key for the theme used</param>
+		internal void SetLastUsedTheme(SpecializedResourceDictionary.ResourceKey? resourceKey) => _themeLastUsed = resourceKey;
 
 		private ManagedWeakReference ThisWeakReference
 			=> _thisWeakRef ??= Uno.UI.DataBinding.WeakReferencePool.RentWeakReference(this, this);
